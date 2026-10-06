@@ -1,3 +1,15 @@
 name = "x-store"
 compatibility_date = "2026-10-06"
-pages_build_output_dir = "public"  # Apuntando a tu carpeta de salida
+pages_build_output_dir = "public"
+
+[[kv_namespaces]]
+binding = "XSTORE_KV"
+id = "32bed1dff380438686c0c676f376a0f3"
+
+[[r2_buckets]]
+binding = "XSTORE_R2"
+bucket_name = "xstore-captures"
+
+[vars]
+WHATSAPP_NUMBER = "584165570405"
+ADMIN_TOKEN = "123456789"
