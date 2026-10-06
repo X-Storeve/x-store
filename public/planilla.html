@@ -1,0 +1,1119 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>X-Store | Planilla Diaria</title>
+<link rel="icon" href="logo.png">
+<meta name="theme-color" content="#09090e">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="mobile-web-app-capable" content="yes">
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Orbitron:wght@600;700;800;900&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@latest"></script>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+<script>
+tailwind.config = { darkMode:'class', theme:{ extend:{
+    colors:{ cyber:{ bg:'#09090e', card:'#12121e', cyan:'#00f2ff', magenta:'#e000ff' } },
+    fontFamily:{ orbitron:['Orbitron','sans-serif'], sans:['Inter','sans-serif'] }
+}}};
+</script>
+<style>
+* { -webkit-tap-highlight-color: transparent; }
+body { background:#09090e; color:#f8fafc;
+    background-image: radial-gradient(circle at 15% 15%, rgba(0,242,255,0.05) 0%, transparent 40%),
+                      radial-gradient(circle at 85% 85%, rgba(224,0,255,0.05) 0%, transparent 40%);
+    background-attachment: fixed; overscroll-behavior-y: contain; }
+.glass-card { background:rgba(18,18,30,0.78); backdrop-filter:blur(12px); border:1px solid rgba(255,255,255,0.08); }
+.input-field { width:100%; background:rgba(0,0,0,0.5); border:1px solid #334155; border-radius:.75rem; padding:.75rem 1rem; font-size:1rem; color:#fff; }
+.input-field:focus { outline:none; border-color:#00f2ff; box-shadow:0 0 0 1px #00f2ff; }
+select.input-field { appearance:none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 1rem center; padding-right: 2.5rem; }
+.toast { animation: slide-in .25s ease-out; }
+@keyframes slide-in { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
+.tab-btn { padding:.6rem 1rem; font-family:'Orbitron',sans-serif; font-size:.8rem; font-weight:700; border-bottom:2px solid transparent; color:#94a3b8; }
+.tab-btn.active { color:#00f2ff; border-color:#00f2ff; }
+.tab-badge { display:inline-flex; align-items:center; justify-content:center; min-width:18px; height:18px; padding:0 5px; border-radius:999px; background:#e000ff; color:#fff; font-size:10px; font-weight:900; margin-left:5px; }
+.capture-thumb { max-height:60px; border-radius:8px; border:1px solid rgba(0,242,255,.3); cursor:zoom-in; }
+.status-pill { font-size:10px; font-weight:700; padding:2px 8px; border-radius:999px; }
+.status-pending { background:rgba(251,191,36,.15); color:#fbbf24; border:1px solid rgba(251,191,36,.3); }
+.status-verified { background:rgba(96,165,250,.15); color:#60a5fa; border:1px solid rgba(96,165,250,.3); }
+.status-completed { background:rgba(16,185,129,.15); color:#10b981; border:1px solid rgba(16,185,129,.3); }
+.status-rejected { background:rgba(244,63,94,.15); color:#f43f5e; border:1px solid rgba(244,63,94,.3); }
+.modal-backdrop { position:fixed; inset:0; z-index:100; background:rgba(0,0,0,.85); backdrop-filter:blur(8px); display:flex; align-items:center; justify-content:center; padding:1rem; overflow-y:auto; }
+.list-item { display:flex; align-items:center; gap:8px; padding:8px 12px; background:rgba(0,0,0,.4); border:1px solid #1e293b; border-radius:12px; }
+.list-item input { flex:1; background:transparent; border:none; color:#fff; font-size:.875rem; }
+.list-item input:focus { outline:none; }
+.mini-btn { width:32px; height:32px; border-radius:8px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+/* Spinner de botón */
+.btn-spinner { display:inline-block; width:16px; height:16px; border:2px solid rgba(0,0,0,.3); border-top-color:#000; border-radius:50%; animation: bspin .8s linear infinite; }
+@keyframes bspin { to { transform:rotate(360deg); } }
+/* Deshabilitar clicks en botones mientras procesan */
+.processing { opacity:.6; pointer-events:none; }
+</style>
+</head>
+<body class="font-sans antialiased min-h-screen">
+
+<!-- HEADER -->
+<header class="sticky top-0 z-40 bg-[#09090e]/95 backdrop-blur-md border-b border-cyan-500/20">
+    <div class="max-w-7xl mx-auto px-3 sm:px-6 py-3 flex items-center justify-between gap-2">
+        <div class="flex items-center gap-2 sm:gap-3">
+            <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-cyber-cyan to-cyber-magenta flex items-center justify-center font-orbitron font-black text-black shrink-0">X</div>
+            <div class="min-w-0">
+                <div class="font-orbitron font-bold text-white text-sm sm:text-base leading-tight truncate">PLANILLA DIARIA</div>
+                <div class="text-[10px] text-cyber-cyan leading-tight">Control X-Store</div>
+            </div>
+        </div>
+        <div class="flex items-center gap-1.5 sm:gap-2">
+            <a href="admin.html" class="px-2.5 sm:px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white text-xs font-orbitron font-bold flex items-center gap-1.5">
+                <i data-lucide="settings" class="w-4 h-4"></i><span class="hidden sm:inline">Admin</span>
+            </a>
+            <button onclick="exportXLSX()" class="px-2.5 sm:px-3 py-2 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 text-xs font-orbitron font-bold flex items-center gap-1.5">
+                <i data-lucide="file-spreadsheet" class="w-4 h-4"></i><span class="hidden sm:inline">Excel</span>
+            </button>
+            <button onclick="window.print()" class="px-2.5 sm:px-3 py-2 rounded-lg bg-cyber-cyan/10 hover:bg-cyber-cyan/20 border border-cyber-cyan/30 text-cyber-cyan text-xs font-orbitron font-bold flex items-center gap-1.5">
+                <i data-lucide="printer" class="w-4 h-4"></i><span class="hidden sm:inline">Imprimir</span>
+            </button>
+            <button onclick="logout()" class="px-2.5 sm:px-3 py-2 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-400 text-xs font-orbitron font-bold flex items-center gap-1.5">
+                <i data-lucide="log-out" class="w-4 h-4"></i>
+            </button>
+        </div>
+    </div>
+
+    <div class="max-w-7xl mx-auto px-3 sm:px-6 flex gap-1 border-t border-slate-900 overflow-x-auto">
+        <button onclick="switchTab('recargas')" id="tab-recargas" class="tab-btn active whitespace-nowrap">
+            <i data-lucide="clipboard-list" class="w-3.5 h-3.5 inline mr-1"></i> Recargas
+        </button>
+        <button onclick="switchTab('clientes')" id="tab-clientes" class="tab-btn whitespace-nowrap">
+            <i data-lucide="users" class="w-3.5 h-3.5 inline mr-1"></i> Clientes
+        </button>
+        <button onclick="switchTab('pedidos')" id="tab-pedidos" class="tab-btn whitespace-nowrap">
+            <i data-lucide="shopping-cart" class="w-3.5 h-3.5 inline mr-1"></i> Pedidos <span id="pedidosBadge" class="tab-badge hidden">0</span>
+        </button>
+        <button onclick="switchTab('listas')" id="tab-listas" class="tab-btn whitespace-nowrap">
+            <i data-lucide="list" class="w-3.5 h-3.5 inline mr-1"></i> Listas
+        </button>
+    </div>
+</header>
+
+<!-- ====== TAB: RECARGAS ====== -->
+<main id="view-recargas" class="max-w-7xl mx-auto px-3 sm:px-6 py-4 space-y-4">
+    <div class="flex flex-wrap items-center gap-2">
+        <button onclick="changeDay(-1)" class="w-9 h-9 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center shrink-0"><i data-lucide="chevron-left" class="w-4 h-4 text-gray-300"></i></button>
+        <input type="date" id="datePicker" class="input-field flex-1 min-w-[140px] font-mono text-sm py-2">
+        <button onclick="changeDay(1)" class="w-9 h-9 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center shrink-0"><i data-lucide="chevron-right" class="w-4 h-4 text-gray-300"></i></button>
+        <button onclick="goToday()" class="px-3 py-2 rounded-lg bg-cyber-cyan/10 border border-cyber-cyan/30 text-cyber-cyan text-xs font-orbitron font-bold">HOY</button>
+    </div>
+
+    <div class="grid grid-cols-3 gap-2 sm:gap-3">
+        <div class="glass-card rounded-xl p-3 text-center"><div class="text-[10px] text-gray-400 font-orbitron uppercase">Recargas</div><div id="sumCount" class="font-orbitron text-xl sm:text-2xl font-black text-cyber-cyan">0</div></div>
+        <div class="glass-card rounded-xl p-3 text-center"><div class="text-[10px] text-gray-400 font-orbitron uppercase">Total Bs.</div><div id="sumTotal" class="font-orbitron text-xl sm:text-2xl font-black text-emerald-400">0</div></div>
+        <div class="glass-card rounded-xl p-3 text-center"><div class="text-[10px] text-gray-400 font-orbitron uppercase">Promedio</div><div id="sumAvg" class="font-orbitron text-xl sm:text-2xl font-black text-cyber-magenta">0</div></div>
+    </div>
+
+    <div class="glass-card rounded-2xl p-4 space-y-3">
+        <h2 id="formTitle" class="font-orbitron font-bold text-white text-sm flex items-center gap-2"><i data-lucide="plus-circle" class="w-4 h-4 text-cyber-cyan"></i><span>Nueva Recarga Manual</span></h2>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+                <label class="block text-[10px] font-orbitron font-bold text-gray-300 uppercase mb-1">N° Teléfono</label>
+                <input type="tel" id="fTel" class="input-field font-mono" placeholder="04141234567" inputmode="tel" autocomplete="off">
+                <p class="text-[10px] text-cyber-cyan/70 mt-1 flex items-center gap-1"><i data-lucide="sparkles" class="w-3 h-3"></i>Autocompleta si ya está registrado</p>
+            </div>
+            <div>
+                <label class="block text-[10px] font-orbitron font-bold text-gray-300 uppercase mb-1">Nombre del cliente</label>
+                <input type="text" id="fNombre" class="input-field" autocomplete="off">
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+                <label class="block text-[10px] font-orbitron font-bold text-gray-300 uppercase mb-1">Juego / Servicio</label>
+                <select id="fJuego" class="input-field">
+                    <option value="">— Selecciona un juego —</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-[10px] font-orbitron font-bold text-gray-300 uppercase mb-1">Recarga (cantidad)</label>
+                <input type="text" id="fRecarga" class="input-field" autocomplete="off" placeholder="1000 diamantes / 300 Bs.">
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+                <label class="block text-[10px] font-orbitron font-bold text-gray-300 uppercase mb-1">ID / Usuario</label>
+                <input type="text" id="fIdUsuario" class="input-field font-mono" autocomplete="off">
+            </div>
+            <div>
+                <label class="block text-[10px] font-orbitron font-bold text-gray-300 uppercase mb-1">Referencia</label>
+                <input type="text" id="fReferencia" class="input-field font-mono" autocomplete="off">
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+                <label class="block text-[10px] font-orbitron font-bold text-gray-300 uppercase mb-1">Banco</label>
+                <select id="fBanco" class="input-field">
+                    <option value="">— Selecciona un banco —</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-[10px] font-orbitron font-bold text-gray-300 uppercase mb-1">Monto (Bs.)</label>
+                <input type="text" id="fMonto" class="input-field font-mono text-lg" inputmode="decimal" autocomplete="off">
+            </div>
+        </div>
+
+        <button onclick="saveRecord()" id="saveBtn" class="w-full py-3.5 rounded-xl font-orbitron font-bold text-black bg-gradient-to-r from-cyber-cyan to-blue-400 hover:brightness-110 flex items-center justify-center gap-2">
+            <i data-lucide="save" class="w-5 h-5"></i><span id="saveBtnText">GUARDAR RECARGA</span>
+        </button>
+    </div>
+
+    <div class="flex items-center justify-between">
+        <h2 class="font-orbitron font-bold text-white text-sm">Registros del día</h2>
+        <input type="search" id="searchBox" oninput="renderRecords()" placeholder="Buscar..." class="input-field py-1.5 text-xs w-40 sm:w-56">
+    </div>
+
+    <div class="glass-card rounded-2xl overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead class="bg-black/40">
+                    <tr class="text-left text-[11px] font-orbitron uppercase text-gray-400">
+                        <th class="px-2 sm:px-3 py-3 w-8">#</th>
+                        <th class="px-2 sm:px-3 py-3">Nombre</th>
+                        <th class="px-2 sm:px-3 py-3 hidden sm:table-cell">Teléfono</th>
+                        <th class="px-2 sm:px-3 py-3">Juego</th>
+                        <th class="px-2 sm:px-3 py-3 hidden md:table-cell">Recarga</th>
+                        <th class="px-2 sm:px-3 py-3 hidden md:table-cell">ID</th>
+                        <th class="px-2 sm:px-3 py-3 hidden lg:table-cell">Referencia</th>
+                        <th class="px-2 sm:px-3 py-3 hidden lg:table-cell">Banco</th>
+                        <th class="px-2 sm:px-3 py-3 hidden lg:table-cell text-center">Origen</th>
+                        <th class="px-2 sm:px-3 py-3 text-right">Monto Bs.</th>
+                        <th class="px-2 sm:px-3 py-3 w-16 text-center">Acc.</th>
+                    </tr>
+                </thead>
+                <tbody id="recordsTbody"></tbody>
+            </table>
+        </div>
+    </div>
+    <div id="emptyState" class="hidden glass-card rounded-2xl p-8 text-center text-gray-400">
+        <i data-lucide="inbox" class="w-10 h-10 mx-auto mb-2 opacity-50"></i>
+        <p class="text-sm">No hay registros para este día.</p>
+    </div>
+
+    <div class="glass-card rounded-2xl p-4">
+        <div class="flex justify-between items-center mb-2">
+            <span class="font-orbitron text-xs text-gray-400 uppercase">TOTAL DEL DÍA</span>
+            <span id="footerTotal" class="font-orbitron text-2xl font-black text-cyber-cyan">Bs. 0</span>
+        </div>
+        <div id="bankTotals" class="text-[11px] text-gray-400 space-y-0.5"></div>
+    </div>
+</main>
+
+<!-- ====== TAB: CLIENTES ====== -->
+<main id="view-clientes" class="max-w-7xl mx-auto px-3 sm:px-6 py-4 space-y-4 hidden">
+    <div class="flex items-center justify-between flex-wrap gap-2">
+        <div>
+            <h2 class="font-orbitron text-lg font-bold text-white">Clientes Registrados</h2>
+            <p class="text-[11px] text-gray-400">Solo tú puedes registrar clientes.</p>
+        </div>
+        <button onclick="openClientModal()" class="px-3 py-2 rounded-xl bg-cyber-cyan text-black font-orbitron font-bold text-xs flex items-center gap-1.5">
+            <i data-lucide="user-plus" class="w-4 h-4"></i> Registrar Cliente
+        </button>
+    </div>
+
+    <div class="flex items-center gap-2">
+        <input type="search" id="clientSearch" oninput="renderClients()" placeholder="Buscar por teléfono o nombre..." class="input-field text-sm flex-1">
+        <button onclick="loadClients()" class="px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white text-xs font-orbitron font-bold flex items-center gap-1.5">
+            <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Recargar
+        </button>
+    </div>
+
+    <div id="clientsList" class="space-y-2"></div>
+    <div id="clientsEmpty" class="hidden glass-card rounded-2xl p-8 text-center text-gray-400">
+        <i data-lucide="users" class="w-10 h-10 mx-auto mb-2 opacity-50"></i>
+        <p class="text-sm">No hay clientes registrados.</p>
+    </div>
+</main>
+
+<!-- ====== TAB: PEDIDOS ====== -->
+<main id="view-pedidos" class="max-w-7xl mx-auto px-3 sm:px-6 py-4 space-y-4 hidden">
+    <div class="flex items-center justify-between flex-wrap gap-2">
+        <div>
+            <h2 class="font-orbitron text-lg font-bold text-white">Pedidos de la Web</h2>
+            <p class="text-[11px] text-gray-400">Pedidos enviados desde index.html.</p>
+        </div>
+        <div class="flex items-center gap-2">
+            <select id="ordersFilter" onchange="loadOrders()" class="input-field text-xs py-2 w-32">
+                <option value="">Todos</option>
+                <option value="pending" selected>Pendientes</option>
+                <option value="verified">Verificados</option>
+                <option value="completed">Completados</option>
+                <option value="rejected">Rechazados</option>
+            </select>
+            <button onclick="loadOrders()" class="px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white text-xs font-orbitron font-bold flex items-center gap-1.5">
+                <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Recargar
+            </button>
+        </div>
+    </div>
+
+    <div id="ordersList" class="space-y-3"></div>
+    <div id="ordersEmpty" class="hidden glass-card rounded-2xl p-8 text-center text-gray-400">
+        <i data-lucide="shopping-bag" class="w-10 h-10 mx-auto mb-2 opacity-50"></i>
+        <p class="text-sm">No hay pedidos con este filtro.</p>
+    </div>
+</main>
+
+<!-- ====== TAB: LISTAS ====== -->
+<main id="view-listas" class="max-w-5xl mx-auto px-3 sm:px-6 py-4 space-y-4 hidden">
+    <div>
+        <h2 class="font-orbitron text-lg font-bold text-white">Listas Desplegables</h2>
+        <p class="text-[11px] text-gray-400">Edita los bancos y juegos disponibles en el formulario de recarga.</p>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="glass-card rounded-2xl p-4 space-y-3">
+            <div class="flex items-center justify-between">
+                <h3 class="font-orbitron font-bold text-white text-sm flex items-center gap-2">
+                    <i data-lucide="landmark" class="w-4 h-4 text-cyber-cyan"></i> Bancos
+                </h3>
+                <span id="bancosCount" class="text-[10px] text-gray-500"></span>
+            </div>
+            <div id="bancosList" class="space-y-1.5 max-h-96 overflow-y-auto"></div>
+            <div class="flex gap-2 pt-2 border-t border-slate-800">
+                <input type="text" id="newBanco" class="input-field text-sm flex-1" placeholder="Nuevo banco...">
+                <button onclick="addBanco()" class="px-3 py-2 rounded-lg bg-cyber-cyan text-black font-orbitron font-bold text-xs flex items-center gap-1">
+                    <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                </button>
+            </div>
+        </div>
+
+        <div class="glass-card rounded-2xl p-4 space-y-3">
+            <div class="flex items-center justify-between">
+                <h3 class="font-orbitron font-bold text-white text-sm flex items-center gap-2">
+                    <i data-lucide="gamepad-2" class="w-4 h-4 text-cyber-magenta"></i> Juegos
+                </h3>
+                <span id="juegosCount" class="text-[10px] text-gray-500"></span>
+            </div>
+            <div id="juegosList" class="space-y-1.5 max-h-96 overflow-y-auto"></div>
+            <div class="flex gap-2 pt-2 border-t border-slate-800">
+                <input type="text" id="newJuego" class="input-field text-sm flex-1" placeholder="Nuevo juego...">
+                <button onclick="addJuego()" class="px-3 py-2 rounded-lg bg-cyber-magenta text-white font-orbitron font-bold text-xs flex items-center gap-1">
+                    <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="flex gap-2 flex-wrap">
+        <button onclick="saveLists()" class="flex-1 py-3 rounded-xl font-orbitron font-bold text-black bg-gradient-to-r from-cyber-cyan to-blue-400 flex items-center justify-center gap-2">
+            <i data-lucide="save" class="w-5 h-5"></i> GUARDAR LISTAS
+        </button>
+        <button onclick="reloadLists()" class="px-5 py-3 rounded-xl font-orbitron font-bold text-white bg-slate-800 border border-slate-700 flex items-center gap-2">
+            <i data-lucide="refresh-cw" class="w-4 h-4"></i> Recargar
+        </button>
+    </div>
+</main>
+
+<!-- MODAL CLIENTE -->
+<div id="clientModal" class="modal-backdrop hidden">
+<div class="glass-card w-full max-w-md rounded-3xl border border-cyber-cyan/40 overflow-hidden my-8">
+    <div class="p-4 border-b border-slate-800 flex items-center justify-between bg-gradient-to-r from-cyber-card to-slate-900">
+        <h3 id="clientModalTitle" class="font-orbitron font-bold text-white">Registrar Cliente</h3>
+        <button onclick="closeClientModal()" class="w-8 h-8 rounded-full bg-slate-800 text-gray-400 flex items-center justify-center"><i data-lucide="x" class="w-5 h-5"></i></button>
+    </div>
+    <div class="p-5 space-y-3 max-h-[75vh] overflow-y-auto">
+        <div><label class="block text-[10px] font-orbitron font-bold text-gray-300 uppercase mb-1">Teléfono</label><input type="tel" id="cm-phone" class="input-field font-mono" placeholder="04141234567" inputmode="tel"></div>
+        <div class="grid grid-cols-2 gap-3">
+            <div><label class="block text-[10px] font-orbitron font-bold text-gray-300 uppercase mb-1">Nombre</label><input type="text" id="cm-firstName" class="input-field"></div>
+            <div><label class="block text-[10px] font-orbitron font-bold text-gray-300 uppercase mb-1">Apellido</label><input type="text" id="cm-lastName" class="input-field"></div>
+        </div>
+        <div><label class="block text-[10px] font-orbitron font-bold text-gray-300 uppercase mb-1">Cédula (opcional)</label><input type="text" id="cm-cedula" class="input-field font-mono"></div>
+        <div><label class="block text-[10px] font-orbitron font-bold text-gray-300 uppercase mb-1">Notas (opcional)</label><input type="text" id="cm-notes" class="input-field"></div>
+
+        <div id="changePhoneBox" class="hidden pt-3 border-t border-slate-800">
+            <label class="block text-[10px] font-orbitron font-bold text-amber-400 uppercase mb-1">Cambiar teléfono</label>
+            <div class="flex gap-2">
+                <input type="tel" id="cm-newPhone" class="input-field font-mono flex-1" placeholder="Nuevo teléfono">
+                <button onclick="changeClientPhone()" class="px-3 py-2 rounded-lg bg-amber-500 text-black font-orbitron font-bold text-xs whitespace-nowrap">CAMBIAR</button>
+            </div>
+            <p class="text-[10px] text-amber-300/70 mt-1">Se actualizarán TODAS las recargas y pedidos.</p>
+        </div>
+
+        <div class="flex gap-2 pt-2">
+            <button onclick="saveClient()" class="flex-1 py-3 rounded-xl font-orbitron font-bold text-black bg-gradient-to-r from-cyber-cyan to-blue-400">GUARDAR</button>
+            <button onclick="deleteClient()" id="deleteClientBtn" class="hidden px-4 py-3 rounded-xl bg-rose-500/10 text-rose-400 border border-rose-500/30"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+        </div>
+    </div>
+</div>
+</div>
+
+<!-- MODAL IMAGEN -->
+<div id="imgModal" class="modal-backdrop hidden" onclick="if(event.target===this)closeImgModal()">
+    <img id="imgModalSrc" class="max-w-full max-h-[90vh] rounded-2xl border border-cyber-cyan/40">
+</div>
+
+<!-- TOAST -->
+<div id="toast" class="fixed bottom-4 left-1/2 -translate-x-1/2 z-[200] hidden">
+    <div class="glass-card px-4 py-2.5 rounded-xl border border-cyber-cyan/40 flex items-center gap-2 toast">
+        <i data-lucide="check-circle" class="w-4 h-4 text-emerald-400"></i>
+        <span id="toastText" class="text-sm text-white">Guardado</span>
+    </div>
+</div>
+
+<script>
+const STORAGE_KEY = 'xstore_planilla_v2';
+const AUTH_URL = 'api/auth';
+const CLIENTS_URL = 'api/clients';
+const ORDERS_URL = 'api/orders';
+const LISTS_URL = 'api/lists';
+
+let DB = {
+    version: 2,
+    days: {},
+    contacts: {},
+    settings: { operator:'' }
+};
+let clientsServer = {};
+let listsServer = { bancos:[], juegos:[] };
+let editingId = null;
+let editingClientPhone = null;
+
+// ============ STORAGE ============
+function loadDB(){
+    try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (raw){
+            const p = JSON.parse(raw);
+            if (p && typeof p === 'object'){
+                DB = Object.assign(DB, p);
+                if (!DB.days) DB.days = {};
+                if (!DB.contacts) DB.contacts = {};
+                if (!DB.settings) DB.settings = { operator:'' };
+            }
+        }
+    } catch(e){}
+}
+function saveDB(){ try { localStorage.setItem(STORAGE_KEY, JSON.stringify(DB)); } catch(e){} }
+
+// ============ AUTH ============
+async function checkAuth(){
+    try {
+        const res = await fetch(`${AUTH_URL}?action=guard`);
+        if (!res.ok){ location.replace('login.html?next=planilla.html'); return false; }
+        const d = await res.json();
+        return d.ok === true;
+    } catch(e){ location.replace('login.html?next=planilla.html'); return false; }
+}
+async function logout(){
+    try { await fetch(`${AUTH_URL}?action=logout`); } catch(e){}
+    location.replace('login.html');
+}
+
+// ============ UTIL ============
+function todayISO(){ const d=new Date(); const tz=d.getTimezoneOffset()*60000; return new Date(d-tz).toISOString().slice(0,10); }
+function escapeHtml(s){ return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function normalizePhone(p){ return String(p||'').replace(/\D/g,''); }
+function getCurrentDay(){ return document.getElementById('datePicker').value || todayISO(); }
+function getCurrentRecords(){ const d=getCurrentDay(); if(!DB.days[d]) DB.days[d]=[]; return DB.days[d]; }
+
+// ** NUEVO: formateo inteligente sin decimales innecesarios **
+function fmtAmount(n){
+    const num = Number(n);
+    if (!isFinite(num)) return '0';
+    // Si es entero, sin decimales. Si tiene decimales, con 2
+    if (Math.abs(num - Math.round(num)) < 0.0001) {
+        return Math.round(num).toLocaleString('es-VE');
+    }
+    return num.toLocaleString('es-VE', { minimumFractionDigits:2, maximumFractionDigits:2 });
+}
+function parseAmount(str){
+    if (typeof str === 'number') return str;
+    if (!str) return 0;
+    let s = String(str).replace(/[^\d.,-]/g,'');
+    if (s.includes(',')){ s = s.replace(/\./g,''); s = s.replace(',','.'); }
+    const n = parseFloat(s);
+    return isFinite(n) ? n : 0;
+}
+
+let toastTimer;
+function toast(msg, type='success'){
+    const t = document.getElementById('toast');
+    document.getElementById('toastText').innerText = msg;
+    const i = t.querySelector('i');
+    i.setAttribute('data-lucide', type==='error'?'alert-circle':'check-circle');
+    i.className = type==='error'?'w-4 h-4 text-rose-400':'w-4 h-4 text-emerald-400';
+    t.classList.remove('hidden'); lucide.createIcons();
+    clearTimeout(toastTimer); toastTimer = setTimeout(()=>t.classList.add('hidden'),2200);
+}
+
+// ============ TABS ============
+function switchTab(tab){
+    ['recargas','clientes','pedidos','listas'].forEach(t=>{
+        document.getElementById('view-'+t).classList.toggle('hidden', t!==tab);
+        const btn = document.getElementById('tab-'+t);
+        if (t===tab) btn.classList.add('active'); else btn.classList.remove('active');
+    });
+    if (tab==='clientes') loadClients();
+    if (tab==='pedidos') loadOrders();
+    if (tab==='listas') loadLists(true);
+}
+
+// ============ DÍA ============
+function changeDay(delta){
+    const d = new Date(getCurrentDay()+'T00:00:00');
+    d.setDate(d.getDate()+delta);
+    document.getElementById('datePicker').value = d.toISOString().slice(0,10);
+    renderRecords();
+}
+function goToday(){ document.getElementById('datePicker').value = todayISO(); renderRecords(); }
+
+// ============ FORM ============
+function clearForm(){
+    ['fTel','fNombre','fRecarga','fIdUsuario','fReferencia','fMonto'].forEach(id=>{
+        const el = document.getElementById(id); if (el) el.value='';
+    });
+    const selJ = document.getElementById('fJuego'); if (selJ) selJ.value = '';
+    const selB = document.getElementById('fBanco'); if (selB) selB.value = '';
+    editingId = null;
+    document.getElementById('formTitle').innerHTML = '<i data-lucide="plus-circle" class="w-4 h-4 text-cyber-cyan"></i><span>Nueva Recarga Manual</span>';
+    document.getElementById('saveBtnText').innerText = 'GUARDAR RECARGA';
+    lucide.createIcons();
+}
+
+function saveRecord(){
+    const tel = document.getElementById('fTel').value.trim();
+    const nombre = document.getElementById('fNombre').value.trim();
+    const juego = document.getElementById('fJuego').value.trim();
+    const recarga = document.getElementById('fRecarga').value.trim();
+    const idUsuario = document.getElementById('fIdUsuario').value.trim();
+    const referencia = document.getElementById('fReferencia').value.trim();
+    const banco = document.getElementById('fBanco').value.trim();
+    const monto = parseAmount(document.getElementById('fMonto').value);
+
+    if (!tel && !nombre){ toast('Ingresa al menos un teléfono o nombre', 'error'); return; }
+    if (!juego){ toast('Selecciona un juego', 'error'); return; }
+    if (monto <= 0){ toast('Monto debe ser mayor a 0', 'error'); return; }
+
+    const day = getCurrentDay();
+    if (!DB.days[day]) DB.days[day] = [];
+
+    const record = {
+        id: editingId || ('r-'+Date.now()+'-'+Math.random().toString(36).slice(2,6)),
+        nombre: nombre || 'Sin nombre',
+        telefono: tel,
+        juego, recarga, idUsuario, referencia, banco, monto,
+        source: 'manual',
+        createdAt: editingId ? (DB.days[day].find(r=>r.id===editingId)?.createdAt || new Date().toISOString()) : new Date().toISOString()
+    };
+
+    if (editingId){
+        const idx = DB.days[day].findIndex(r=>r.id===editingId);
+        if (idx>=0) DB.days[day][idx] = record;
+    } else DB.days[day].push(record);
+
+    saveDB(); renderRecords();
+    const wasEditing = !!editingId;
+    clearForm();
+    toast(wasEditing ? 'Actualizado' : 'Recarga guardada');
+}
+
+function editRecord(id){
+    const rec = getCurrentRecords().find(r=>r.id===id); if (!rec) return;
+    editingId = id;
+    document.getElementById('fTel').value = rec.telefono || '';
+    document.getElementById('fNombre').value = rec.nombre || '';
+    document.getElementById('fRecarga').value = rec.recarga || '';
+    document.getElementById('fIdUsuario').value = rec.idUsuario || '';
+    document.getElementById('fReferencia').value = rec.referencia || '';
+    document.getElementById('fMonto').value = fmtAmount(rec.monto || 0);
+
+    const selJ = document.getElementById('fJuego');
+    ensureOption(selJ, rec.juego || '');
+    selJ.value = rec.juego || '';
+
+    const selB = document.getElementById('fBanco');
+    ensureOption(selB, rec.banco || '');
+    selB.value = rec.banco || '';
+
+    document.getElementById('formTitle').innerHTML = '<i data-lucide="pencil" class="w-4 h-4 text-amber-400"></i><span>Editando recarga</span>';
+    document.getElementById('saveBtnText').innerText = 'ACTUALIZAR';
+    lucide.createIcons();
+    window.scrollTo({ top:0, behavior:'smooth' });
+}
+
+function ensureOption(selectEl, value){
+    if (!value) return;
+    const exists = Array.from(selectEl.options).some(o => o.value === value);
+    if (!exists){
+        const opt = document.createElement('option');
+        opt.value = value; opt.textContent = value + ' (histórico)';
+        selectEl.appendChild(opt);
+    }
+}
+
+function deleteRecord(id){
+    if (!confirm('¿Eliminar este registro?')) return;
+    const day = getCurrentDay();
+    if (!DB.days[day]) return;
+    DB.days[day] = DB.days[day].filter(r=>r.id!==id);
+    saveDB(); renderRecords(); toast('Registro eliminado');
+}
+
+// ============ AUTOCOMPLETE ============
+function setupAutocomplete(){
+    const tel = document.getElementById('fTel');
+    const nom = document.getElementById('fNombre');
+    const ban = document.getElementById('fBanco');
+    const jue = document.getElementById('fJuego');
+    tel.addEventListener('input', ()=>{
+        const k = normalizePhone(tel.value);
+        if (!k || k.length<8) return;
+        const c = clientsServer[k] || DB.contacts[k];
+        if (c){
+            if (c.firstName && !nom.value) nom.value = (c.firstName + ' ' + (c.lastName||'')).trim();
+            if (c.nombre && !nom.value) nom.value = c.nombre;
+            if (c.juego && !jue.value) ensureOption(jue, c.juego), jue.value = c.juego;
+            if (c.banco && !ban.value) ensureOption(ban, c.banco), ban.value = c.banco;
+        }
+    });
+}
+
+// ============ LISTAS ============
+async function loadLists(){
+    try {
+        const res = await fetch(`${LISTS_URL}?t=${Date.now()}`, { cache:'no-cache' });
+        const data = await res.json();
+        listsServer.bancos = Array.isArray(data.bancos) ? data.bancos : [];
+        listsServer.juegos  = Array.isArray(data.juegos)  ? data.juegos  : [];
+        renderSelectOptions();
+        renderListsEditor();
+    } catch(e){ toast('Error al cargar listas','error'); }
+}
+function renderSelectOptions(){
+    const selJ = document.getElementById('fJuego');
+    const selB = document.getElementById('fBanco');
+    const currentJ = selJ.value;
+    const currentB = selB.value;
+    selJ.innerHTML = '<option value="">— Selecciona un juego —</option>' +
+        listsServer.juegos.map(j=>`<option value="${escapeHtml(j)}">${escapeHtml(j)}</option>`).join('');
+    selB.innerHTML = '<option value="">— Selecciona un banco —</option>' +
+        listsServer.bancos.map(b=>`<option value="${escapeHtml(b)}">${escapeHtml(b)}</option>`).join('');
+    if (currentJ) ensureOption(selJ, currentJ), selJ.value = currentJ;
+    if (currentB) ensureOption(selB, currentB), selB.value = currentB;
+}
+function renderListsEditor(){
+    document.getElementById('bancosCount').innerText = listsServer.bancos.length + ' items';
+    document.getElementById('juegosCount').innerText = listsServer.juegos.length + ' items';
+    document.getElementById('bancosList').innerHTML = listsServer.bancos.map((b,i)=>`
+        <div class="list-item">
+            <input type="text" value="${escapeHtml(b)}" onchange="updateListItem('bancos',${i},this.value)">
+            <button onclick="moveItem('bancos',${i},-1)" class="mini-btn bg-slate-800 text-gray-400 ${i===0?'opacity-30 pointer-events-none':''}"><i data-lucide="chevron-up" class="w-3.5 h-3.5"></i></button>
+            <button onclick="moveItem('bancos',${i},1)" class="mini-btn bg-slate-800 text-gray-400 ${i===listsServer.bancos.length-1?'opacity-30 pointer-events-none':''}"><i data-lucide="chevron-down" class="w-3.5 h-3.5"></i></button>
+            <button onclick="removeListItem('bancos',${i})" class="mini-btn bg-rose-500/10 text-rose-400 border border-rose-500/30"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+        </div>`).join('') || '<p class="text-xs text-gray-500 italic text-center py-4">Sin bancos.</p>';
+    document.getElementById('juegosList').innerHTML = listsServer.juegos.map((j,i)=>`
+        <div class="list-item">
+            <input type="text" value="${escapeHtml(j)}" onchange="updateListItem('juegos',${i},this.value)">
+            <button onclick="moveItem('juegos',${i},-1)" class="mini-btn bg-slate-800 text-gray-400 ${i===0?'opacity-30 pointer-events-none':''}"><i data-lucide="chevron-up" class="w-3.5 h-3.5"></i></button>
+            <button onclick="moveItem('juegos',${i},1)" class="mini-btn bg-slate-800 text-gray-400 ${i===listsServer.juegos.length-1?'opacity-30 pointer-events-none':''}"><i data-lucide="chevron-down" class="w-3.5 h-3.5"></i></button>
+            <button onclick="removeListItem('juegos',${i})" class="mini-btn bg-rose-500/10 text-rose-400 border border-rose-500/30"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+        </div>`).join('') || '<p class="text-xs text-gray-500 italic text-center py-4">Sin juegos.</p>';
+    lucide.createIcons();
+}
+function updateListItem(key, idx, val){
+    const trimmed = val.trim();
+    if (trimmed === ''){ toast('No puede estar vacío','error'); renderListsEditor(); return; }
+    if (listsServer[key].some((x,i)=> i!==idx && x.toLowerCase()===trimmed.toLowerCase())){ toast('Ya existe ese valor','error'); renderListsEditor(); return; }
+    listsServer[key][idx] = trimmed;
+    renderListsEditor(); renderSelectOptions();
+}
+function moveItem(key, idx, delta){
+    const arr = listsServer[key]; if (!arr) return;
+    const j = idx + delta;
+    if (j<0 || j>=arr.length) return;
+    [arr[idx], arr[j]] = [arr[j], arr[idx]];
+    renderListsEditor(); renderSelectOptions();
+}
+function removeListItem(key, idx){
+    if (!confirm('¿Eliminar este ítem?')) return;
+    listsServer[key].splice(idx,1);
+    renderListsEditor(); renderSelectOptions();
+}
+function addBanco(){
+    const input = document.getElementById('newBanco');
+    const v = input.value.trim(); if (!v) return;
+    if (listsServer.bancos.some(b=>b.toLowerCase()===v.toLowerCase())){ toast('Ya existe','error'); return; }
+    listsServer.bancos.push(v); input.value='';
+    renderListsEditor(); renderSelectOptions();
+}
+function addJuego(){
+    const input = document.getElementById('newJuego');
+    const v = input.value.trim(); if (!v) return;
+    if (listsServer.juegos.some(j=>j.toLowerCase()===v.toLowerCase())){ toast('Ya existe','error'); return; }
+    listsServer.juegos.push(v); input.value='';
+    renderListsEditor(); renderSelectOptions();
+}
+async function saveLists(){
+    if (listsServer.bancos.length===0 || listsServer.juegos.length===0){ toast('Debe haber al menos 1 banco y 1 juego','error'); return; }
+    try {
+        const res = await fetch(`${LISTS_URL}?action=save`, {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({ bancos: listsServer.bancos, juegos: listsServer.juegos })
+        });
+        const data = await res.json();
+        if (!res.ok || !data.ok){ toast(data.error || 'Error', 'error'); return; }
+        listsServer.bancos = data.lists.bancos;
+        listsServer.juegos = data.lists.juegos;
+        renderListsEditor(); renderSelectOptions();
+        toast('Listas guardadas');
+    } catch(e){ toast('Error de conexión','error'); }
+}
+async function reloadLists(){
+    if (!confirm('¿Recargar listas desde el servidor? Se perderán cambios sin guardar.')) return;
+    await loadLists();
+    toast('Listas recargadas');
+}
+
+// ============ RENDER RECARGAS ============
+function renderRecords(){
+    const records = getCurrentRecords();
+    const search = (document.getElementById('searchBox').value||'').toLowerCase().trim();
+    const filtered = search ? records.filter(r =>
+        (r.nombre||'').toLowerCase().includes(search) ||
+        (r.telefono||'').toLowerCase().includes(search) ||
+        (r.juego||'').toLowerCase().includes(search) ||
+        (r.referencia||'').toLowerCase().includes(search) ||
+        (r.idUsuario||'').toLowerCase().includes(search) ||
+        (r.banco||'').toLowerCase().includes(search)
+    ) : records;
+
+    const total = records.reduce((s,r)=>s+(Number(r.monto)||0),0);
+    const count = records.length;
+    const avg = count>0 ? total/count : 0;
+    document.getElementById('sumCount').innerText = count;
+    document.getElementById('sumTotal').innerText = fmtAmount(total);
+    document.getElementById('sumAvg').innerText = fmtAmount(avg);
+    document.getElementById('footerTotal').innerText = 'Bs. ' + fmtAmount(total);
+
+    const bankTotals = {};
+    records.forEach(r=>{ const b = r.banco || 'Sin banco'; bankTotals[b] = (bankTotals[b]||0) + (Number(r.monto)||0); });
+    document.getElementById('bankTotals').innerHTML = Object.entries(bankTotals).sort((a,b)=>b[1]-a[1])
+        .map(([b,v])=>`<div class="flex justify-between"><span>${escapeHtml(b)}</span><span class="font-mono text-gray-300">Bs. ${fmtAmount(v)}</span></div>`).join('') || '<div class="text-gray-600 italic">Sin registros</div>';
+
+    document.getElementById('emptyState').classList.toggle('hidden', filtered.length>0);
+
+    document.getElementById('recordsTbody').innerHTML = filtered.map((r,i)=>`
+        <tr class="border-t border-slate-800 hover:bg-white/[0.02]">
+            <td class="px-2 sm:px-3 py-2.5 text-xs text-gray-500 font-mono">${i+1}</td>
+            <td class="px-2 sm:px-3 py-2.5 text-sm text-white font-semibold">
+                <div class="truncate max-w-[120px] sm:max-w-none">${escapeHtml(r.nombre||'—')}</div>
+                <div class="text-[10px] text-gray-500 font-mono sm:hidden">${escapeHtml(r.telefono||'')}</div>
+            </td>
+            <td class="px-2 sm:px-3 py-2.5 text-xs text-gray-300 font-mono hidden sm:table-cell">${escapeHtml(r.telefono||'—')}</td>
+            <td class="px-2 sm:px-3 py-2.5 text-xs text-white">${escapeHtml(r.juego||'—')}</td>
+            <td class="px-2 sm:px-3 py-2.5 text-xs text-gray-300 hidden md:table-cell">${escapeHtml(r.recarga||'—')}</td>
+            <td class="px-2 sm:px-3 py-2.5 text-xs text-cyber-cyan font-mono hidden md:table-cell">${escapeHtml(r.idUsuario||'—')}</td>
+            <td class="px-2 sm:px-3 py-2.5 text-xs text-gray-300 font-mono hidden lg:table-cell">${escapeHtml(r.referencia||'—')}</td>
+            <td class="px-2 sm:px-3 py-2.5 text-xs text-gray-300 hidden lg:table-cell">${escapeHtml(r.banco||'—')}</td>
+            <td class="px-2 sm:px-3 py-2.5 text-center hidden lg:table-cell">
+                <span class="text-[10px] px-2 py-0.5 rounded-full ${r.source==='web'?'bg-cyan-500/10 text-cyan-400':'bg-slate-700 text-gray-300'}">${r.source==='web'?'Web':'Manual'}</span>
+            </td>
+            <td class="px-2 sm:px-3 py-2.5 text-sm text-right font-orbitron font-bold text-emerald-400 whitespace-nowrap">${fmtAmount(r.monto)}</td>
+            <td class="px-2 sm:px-3 py-2.5">
+                <div class="flex gap-1 justify-center">
+                    <button onclick="editRecord('${r.id}')" class="w-7 h-7 rounded-md bg-cyber-cyan/10 border border-cyber-cyan/30 text-cyber-cyan flex items-center justify-center"><i data-lucide="pencil" class="w-3.5 h-3.5"></i></button>
+                    <button onclick="deleteRecord('${r.id}')" class="w-7 h-7 rounded-md bg-rose-500/10 border border-rose-500/30 text-rose-400 flex items-center justify-center"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+                </div>
+            </td>
+        </tr>`).join('');
+    lucide.createIcons();
+}
+
+// ============ CLIENTES ============
+async function loadClients(){
+    try {
+        const res = await fetch(`${CLIENTS_URL}?action=list`, { cache:'no-cache' });
+        const data = await res.json();
+        if (!res.ok){ toast(data.error || 'Error', 'error'); return; }
+        clientsServer = {};
+        (data.clients||[]).forEach(c=>{ clientsServer[c.phone] = c; });
+        Object.keys(clientsServer).forEach(k=>{
+            DB.contacts[k] = { nombre: `${clientsServer[k].firstName} ${clientsServer[k].lastName}`.trim() };
+        });
+        saveDB();
+        renderClients();
+    } catch(e){ toast('Sin conexión', 'error'); }
+}
+function renderClients(){
+    const list = document.getElementById('clientsList');
+    const empty = document.getElementById('clientsEmpty');
+    const q = (document.getElementById('clientSearch').value||'').toLowerCase().trim();
+    const arr = Object.values(clientsServer)
+        .filter(c => !q || (c.phone||'').includes(q) || (c.firstName||'').toLowerCase().includes(q) || (c.lastName||'').toLowerCase().includes(q))
+        .sort((a,b)=> (a.firstName||'').localeCompare(b.firstName||''));
+    if (arr.length===0){ list.innerHTML=''; empty.classList.remove('hidden'); return; }
+    empty.classList.add('hidden');
+    list.innerHTML = arr.map(c=>`
+        <div class="glass-card rounded-2xl p-4 flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-cyber-cyan/10 border border-cyber-cyan/30 flex items-center justify-center shrink-0">
+                <i data-lucide="user" class="w-5 h-5 text-cyber-cyan"></i>
+            </div>
+            <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2 flex-wrap">
+                    <span class="font-bold text-white text-sm">${escapeHtml(c.firstName)} ${escapeHtml(c.lastName)}</span>
+                    ${c.cedula?`<span class="text-[10px] text-gray-500 font-mono">${escapeHtml(c.cedula)}</span>`:''}
+                </div>
+                <p class="text-xs text-cyber-cyan font-mono mt-0.5">${escapeHtml(c.phone)}</p>
+                ${c.notes?`<p class="text-[10px] text-gray-500 mt-0.5 italic">${escapeHtml(c.notes)}</p>`:''}
+            </div>
+            <div class="flex gap-1.5">
+                <a href="https://wa.me/${escapeHtml(c.phone)}" target="_blank" class="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 flex items-center justify-center"><i data-lucide="message-square" class="w-4 h-4"></i></a>
+                <button onclick="openClientModal('${escapeHtml(c.phone)}')" class="w-8 h-8 rounded-lg bg-cyber-cyan/10 border border-cyber-cyan/30 text-cyber-cyan flex items-center justify-center"><i data-lucide="pencil" class="w-4 h-4"></i></button>
+            </div>
+        </div>`).join('');
+    lucide.createIcons();
+}
+function openClientModal(phone=null){
+    editingClientPhone = phone;
+    const deleteBtn = document.getElementById('deleteClientBtn');
+    const changeBox = document.getElementById('changePhoneBox');
+    if (phone){
+        const c = clientsServer[phone]; if(!c) return;
+        document.getElementById('clientModalTitle').innerText = 'Editar Cliente';
+        document.getElementById('cm-phone').value = c.phone || '';
+        document.getElementById('cm-phone').setAttribute('readonly','readonly');
+        document.getElementById('cm-firstName').value = c.firstName || '';
+        document.getElementById('cm-lastName').value = c.lastName || '';
+        document.getElementById('cm-cedula').value = c.cedula || '';
+        document.getElementById('cm-notes').value = c.notes || '';
+        document.getElementById('cm-newPhone').value = '';
+        deleteBtn.classList.remove('hidden');
+        changeBox.classList.remove('hidden');
+    } else {
+        document.getElementById('clientModalTitle').innerText = 'Registrar Cliente';
+        ['cm-phone','cm-firstName','cm-lastName','cm-cedula','cm-notes','cm-newPhone'].forEach(id=> document.getElementById(id).value='');
+        document.getElementById('cm-phone').removeAttribute('readonly');
+        deleteBtn.classList.add('hidden');
+        changeBox.classList.add('hidden');
+    }
+    document.getElementById('clientModal').classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+    lucide.createIcons();
+}
+function closeClientModal(){ document.getElementById('clientModal').classList.add('hidden'); document.body.style.overflow = ''; editingClientPhone = null; }
+
+async function saveClient(){
+    const phone = normalizePhone(document.getElementById('cm-phone').value);
+    const firstName = document.getElementById('cm-firstName').value.trim();
+    const lastName = document.getElementById('cm-lastName').value.trim();
+    const cedula = document.getElementById('cm-cedula').value.trim();
+    const notes = document.getElementById('cm-notes').value.trim();
+    if (phone.length < 8){ toast('Teléfono inválido', 'error'); return; }
+    if (!firstName || !lastName){ toast('Nombre y apellido obligatorios', 'error'); return; }
+    try {
+        const res = await fetch(`${CLIENTS_URL}?action=save`, {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({ phone, firstName, lastName, cedula, notes })
+        });
+        const data = await res.json();
+        if (!res.ok || !data.ok){ toast(data.error || 'Error', 'error'); return; }
+        clientsServer[data.client.phone] = data.client;
+        DB.contacts[data.client.phone] = { nombre: `${data.client.firstName} ${data.client.lastName}`.trim() };
+        saveDB();
+        renderClients(); closeClientModal();
+        toast(editingClientPhone ? 'Cliente actualizado' : 'Cliente registrado');
+    } catch(e){ toast('Error de conexión', 'error'); }
+}
+async function deleteClient(){
+    if (!editingClientPhone) return;
+    if (!confirm('¿Eliminar este cliente?')) return;
+    try {
+        const res = await fetch(`${CLIENTS_URL}?action=delete`, {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({ phone: editingClientPhone })
+        });
+        const data = await res.json();
+        if (!res.ok || !data.ok){ toast(data.error || 'Error', 'error'); return; }
+        delete clientsServer[editingClientPhone];
+        renderClients(); closeClientModal();
+        toast('Cliente eliminado');
+    } catch(e){ toast('Error de conexión', 'error'); }
+}
+async function changeClientPhone(){
+    if (!editingClientPhone) return;
+    const newPhone = normalizePhone(document.getElementById('cm-newPhone').value);
+    if (newPhone.length < 8){ toast('Nuevo teléfono inválido', 'error'); return; }
+    if (newPhone === editingClientPhone){ toast('Es el mismo número', 'error'); return; }
+    if (!confirm(`¿Cambiar de ${editingClientPhone} a ${newPhone}?`)) return;
+    try {
+        const res = await fetch(`${CLIENTS_URL}?action=change-phone`, {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({ oldPhone: editingClientPhone, newPhone })
+        });
+        const data = await res.json();
+        if (!res.ok || !data.ok){ toast(data.error || 'Error', 'error'); return; }
+        delete clientsServer[editingClientPhone];
+        clientsServer[newPhone] = data.client;
+        Object.keys(DB.days).forEach(day=>{
+            DB.days[day].forEach(r=>{ if (normalizePhone(r.telefono)===editingClientPhone) r.telefono = newPhone; });
+        });
+        delete DB.contacts[editingClientPhone];
+        DB.contacts[newPhone] = { nombre: `${data.client.firstName} ${data.client.lastName}`.trim() };
+        saveDB();
+        renderClients(); renderRecords(); closeClientModal();
+        toast(`Actualizado (${data.ordersUpdated} pedidos)`);
+    } catch(e){ toast('Error de conexión', 'error'); }
+}
+
+// ============ PEDIDOS ============
+async function loadOrders(){
+    const status = document.getElementById('ordersFilter').value;
+    try {
+        const res = await fetch(`${ORDERS_URL}?action=list${status?'&status='+status:''}`, { cache:'no-cache' });
+        const data = await res.json();
+        if (!res.ok){ toast(data.error || 'Error', 'error'); return; }
+        renderOrders(data.orders||[]);
+        updatePedidosBadge();
+    } catch(e){ toast('Sin conexión', 'error'); }
+}
+
+async function updatePedidosBadge(){
+    try {
+        const res = await fetch(`${ORDERS_URL}?action=count-pending`, { cache:'no-cache' });
+        const data = await res.json();
+        const b = document.getElementById('pedidosBadge');
+        const n = data.count || 0;
+        if (n>0){ b.classList.remove('hidden'); b.innerText = n; } else b.classList.add('hidden');
+    } catch(e){}
+}
+
+function renderOrders(orders){
+    const list = document.getElementById('ordersList');
+    const empty = document.getElementById('ordersEmpty');
+    if (!orders.length){ list.innerHTML=''; empty.classList.remove('hidden'); return; }
+    empty.classList.add('hidden');
+    list.innerHTML = orders.map(o=>{
+        const statusCls = 'status-' + (o.status||'pending');
+        const statusLabel = { pending:'Pendiente', verified:'Verificado', completed:'Completado', rejected:'Rechazado' }[o.status||'pending'];
+        const packagesHtml = (o.packages||[]).map(p=>`• ${escapeHtml(p.name)} x${p.qty}`).join('<br>');
+        const captureSrc = o.captureKey
+    ? `/api/capture?id=${encodeURIComponent(o.id)}`
+    : (o.capture || '');
+const captureHtml = captureSrc
+    ? `<img src="${captureSrc}" class="capture-thumb" onclick="showImg(this.src)">`
+    : '';
+        const date = o.createdAt ? new Date(o.createdAt).toLocaleString('es-VE') : '';
+        const totalLocalFmt = fmtAmount(o.totalLocal||0);
+        const isProcessing = o.__processing === true;
+        return `
+        <div class="glass-card rounded-2xl p-4 space-y-3 ${isProcessing?'processing':''}">
+            <div class="flex items-start justify-between gap-2 flex-wrap">
+                <div>
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <span class="font-orbitron font-bold text-white">${escapeHtml(o.gameTitle||'—')}</span>
+                        <span class="status-pill ${statusCls}">${statusLabel}</span>
+                    </div>
+                    <p class="text-[11px] text-gray-400 mt-0.5">${date}</p>
+                </div>
+                <div class="text-right">
+                    <p class="font-orbitron font-black text-emerald-400">${totalLocalFmt} ${escapeHtml(o.currencyCode||'')}</p>
+                    <p class="text-[10px] text-gray-500 font-mono">${o.totalUSDT||0} USDT</p>
+                </div>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                <div class="p-2.5 rounded-xl bg-black/40 border border-slate-800 space-y-1">
+                    <p class="text-[10px] uppercase text-gray-500 font-orbitron font-bold">Cliente</p>
+                    <p class="text-white font-bold">${escapeHtml(o.clientName||'—')}</p>
+                    <p class="text-cyber-cyan font-mono">${escapeHtml(o.phone||'')}</p>
+                </div>
+                <div class="p-2.5 rounded-xl bg-black/40 border border-slate-800 space-y-1">
+                    <p class="text-[10px] uppercase text-gray-500 font-orbitron font-bold">Juego / ID</p>
+                    <p class="text-white font-mono">${escapeHtml(o.playerId||'—')}${o.serverId?' (SV:'+escapeHtml(o.serverId)+')':''}</p>
+                </div>
+                <div class="p-2.5 rounded-xl bg-black/40 border border-slate-800 space-y-1">
+                    <p class="text-[10px] uppercase text-gray-500 font-orbitron font-bold">Paquetes</p>
+                    <p class="text-xs text-gray-200">${packagesHtml||'—'}</p>
+                </div>
+                <div class="p-2.5 rounded-xl bg-black/40 border border-slate-800 space-y-1">
+                    <p class="text-[10px] uppercase text-gray-500 font-orbitron font-bold">Pago</p>
+                    <p class="text-white">${escapeHtml(o.paymentMethod||'—')}</p>
+                    <p class="text-xs text-gray-300 font-mono">Ref: ${escapeHtml(o.reference||'—')}${o.bank?' · '+escapeHtml(o.bank):''}</p>
+                    ${captureHtml}
+                </div>
+            </div>
+            <div class="flex gap-2 flex-wrap pt-1">
+                ${o.status==='pending'?`
+                    <button onclick="verifyOrder('${o.id}', this)" class="flex-1 py-2.5 rounded-xl bg-emerald-500 text-black font-orbitron font-bold text-xs flex items-center justify-center gap-1.5">
+                        <i data-lucide="check-circle" class="w-4 h-4"></i> VERIFICAR Y REGISTRAR
+                    </button>
+                    <button onclick="setOrderStatus('${o.id}','rejected', this)" class="px-4 py-2.5 rounded-xl bg-rose-500/10 text-rose-400 border border-rose-500/30 font-orbitron font-bold text-xs">
+                        <i data-lucide="x" class="w-4 h-4"></i>
+                    </button>
+                `:''}
+                ${o.status==='verified'?`
+                    <button onclick="setOrderStatus('${o.id}','completed', this)" class="flex-1 py-2.5 rounded-xl bg-cyber-cyan text-black font-orbitron font-bold text-xs">MARCAR COMPLETADO</button>
+                `:''}
+                <button onclick="deleteOrder('${o.id}', this)" class="px-4 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-gray-300 font-orbitron font-bold text-xs">
+                    <i data-lucide="trash-2" class="w-4 h-4"></i>
+                </button>
+            </div>
+        </div>`;
+    }).join('');
+    lucide.createIcons();
+}
+
+function setBtnLoading(btn, text='Procesando...'){
+    if (!btn) return null;
+    const original = btn.innerHTML;
+    btn.classList.add('processing');
+    btn.innerHTML = `<span class="btn-spinner"></span><span class="ml-1">${text}</span>`;
+    return original;
+}
+function restoreBtn(btn, original){
+    if (!btn || !original) return;
+    btn.classList.remove('processing');
+    btn.innerHTML = original;
+    lucide.createIcons();
+}
+
+function showImg(src){ document.getElementById('imgModalSrc').src = src; document.getElementById('imgModal').classList.remove('hidden'); }
+function closeImgModal(){ document.getElementById('imgModal').classList.add('hidden'); }
+
+async function verifyOrder(id, btn){
+    if (!confirm('¿Verificar y registrar este pedido?')) return;
+    const original = setBtnLoading(btn, 'Verificando...');
+    try {
+        // 1) Traer SOLO ese pedido (rápido)
+        const r1 = await fetch(`${ORDERS_URL}?action=get&id=${encodeURIComponent(id)}`, { cache:'no-cache' });
+        const d1 = await r1.json();
+        if (!r1.ok || !d1.order){ toast(d1.error || 'Pedido no encontrado', 'error'); restoreBtn(btn, original); return; }
+        const o = d1.order;
+
+        // 2) Cambiar estado
+        const r2 = await fetch(`${ORDERS_URL}?action=set-status`, {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({ id, status:'verified' })
+        });
+        const d2 = await r2.json();
+        if (!r2.ok || !d2.ok){ toast(d2.error || 'Error al cambiar estado', 'error'); restoreBtn(btn, original); return; }
+
+        // 3) Registrar localmente en la planilla del día
+        const day = (o.createdAt||'').slice(0,10) || todayISO();
+        if (!DB.days[day]) DB.days[day] = [];
+        const already = DB.days[day].some(r=> r.orderId === id);
+        if (!already){
+            const pkgSummary = (o.packages||[]).map(p=>`${p.name} x${p.qty}`).join(' + ');
+            DB.days[day].push({
+                id: 'r-web-'+id, orderId: id,
+                nombre: o.clientName || '—',
+                telefono: o.phone || '',
+                juego: o.gameTitle || '',
+                recarga: pkgSummary,
+                idUsuario: o.playerId || '',
+                referencia: o.reference || '',
+                banco: o.bank || '',
+                monto: Number(o.totalLocal||0),
+                source: 'web',
+                createdAt: o.createdAt || new Date().toISOString()
+            });
+            saveDB();
+        }
+
+        toast('Pedido verificado y registrado');
+        // Marcar visualmente como procesando y recargar en background
+        if (getCurrentDay() === day) renderRecords();
+        loadOrders();
+    } catch(e){
+        toast('Error de conexión: '+e.message, 'error');
+        restoreBtn(btn, original);
+    }
+}
+
+async function setOrderStatus(id, status, btn){
+    const original = setBtnLoading(btn, 'Actualizando...');
+    try {
+        const res = await fetch(`${ORDERS_URL}?action=set-status`, {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({ id, status })
+        });
+        const data = await res.json();
+        if (!res.ok || !data.ok){ toast(data.error||'Error','error'); restoreBtn(btn, original); return; }
+        toast('Estado actualizado');
+        loadOrders();
+    } catch(e){ toast('Error','error'); restoreBtn(btn, original); }
+}
+
+async function deleteOrder(id, btn){
+    if (!confirm('¿Eliminar este pedido?')) return;
+    const original = setBtnLoading(btn, 'Eliminando...');
+    try {
+        const res = await fetch(`${ORDERS_URL}?action=delete`, {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({ id })
+        });
+        const data = await res.json();
+        if (!res.ok || !data.ok){ toast(data.error||'Error','error'); restoreBtn(btn, original); return; }
+        toast('Pedido eliminado');
+        loadOrders();
+    } catch(e){ toast('Error','error'); restoreBtn(btn, original); }
+}
+
+// ============ EXPORT ============
+function getExportRows(){
+    return getCurrentRecords().map((r,i)=>({
+        'N°': i+1, 'Nombre': r.nombre||'', 'Número': r.telefono||'',
+        'Juego': r.juego||'', 'Recarga': r.recarga||'', 'ID': r.idUsuario||'',
+        'Referencia': r.referencia||'', 'Banco': r.banco||'', 'Origen': r.source||'manual',
+        'Monto (Bs.)': Number(r.monto)||0
+    }));
+}
+function exportXLSX(){
+    const rows = getExportRows();
+    if (!rows.length){ toast('No hay registros','error'); return; }
+    const ws = XLSX.utils.json_to_sheet(rows);
+    ws['!cols'] = [{wch:5},{wch:24},{wch:14},{wch:16},{wch:18},{wch:16},{wch:14},{wch:14},{wch:10},{wch:14}];
+    const total = rows.reduce((s,r)=>s+(Number(r['Monto (Bs.)'])||0),0);
+    XLSX.utils.sheet_add_aoa(ws, [['','','','','','','','','TOTAL',total]], { origin:-1 });
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Planilla');
+    XLSX.writeFile(wb, `X-Store_Planilla_${getCurrentDay()}.xlsx`);
+    toast('Excel descargado');
+}
+
+// ============ INIT ============
+document.addEventListener('DOMContentLoaded', async ()=>{
+    if (!await checkAuth()) return;
+    loadDB();
+    lucide.createIcons();
+
+    document.getElementById('datePicker').value = todayISO();
+    document.getElementById('datePicker').addEventListener('change', renderRecords);
+
+    const monto = document.getElementById('fMonto');
+    monto.addEventListener('blur', ()=>{ const n=parseAmount(monto.value); if (n>0||monto.value.trim()!=='') monto.value = fmtAmount(n); });
+    monto.addEventListener('focus', ()=>{ const n=parseAmount(monto.value); monto.value = n>0?String(n):''; });
+
+    ['fTel','fNombre','fRecarga','fIdUsuario','fReferencia','fMonto'].forEach(id=>{
+        const el = document.getElementById(id); if (!el) return;
+        el.addEventListener('keydown', e=>{ if (e.key==='Enter'){ e.preventDefault(); saveRecord(); } });
+    });
+
+    setupAutocomplete();
+    await loadLists();
+    renderRecords();
+
+    loadClients();
+    loadOrders();
+
+    // Refrescar badge cada 45s y pedidos cada 60s (más ligero)
+    setInterval(()=>{ updatePedidosBadge(); }, 45000);
+    setInterval(()=>{ loadOrders(); }, 60000);
+});
+
+document.addEventListener('keydown', e=>{
+    if (e.key==='Escape'){ closeClientModal(); closeImgModal(); }
+});
+</script>
+</body>
+</html>

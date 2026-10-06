@@ -1,0 +1,993 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>X-Store | Panel de Administración</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="icon" href="logo.png">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#09090e">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Orbitron:wght@600;700;800;900&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@latest"></script>
+<script>
+tailwind.config = { theme: { extend: {
+    colors: { cyber: { bg:'#09090e', card:'#12121e', cyan:'#00f2ff', magenta:'#e000ff' } },
+    fontFamily: { orbitron:['Orbitron','sans-serif'], sans:['Inter','sans-serif'] }
+}}};
+</script>
+<style>
+body { background:#09090e; color:#f8fafc;
+    background-image: radial-gradient(circle at 15% 15%, rgba(0,242,255,0.05) 0%, transparent 40%),
+                      radial-gradient(circle at 85% 85%, rgba(224,0,255,0.05) 0%, transparent 40%);
+    background-attachment: fixed; }
+.glass-card { background: rgba(18,18,30,0.75); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.08); }
+.input-field { width:100%; background:rgba(0,0,0,0.5); border:1px solid #334155; border-radius:.75rem; padding:.75rem 1rem; font-size:.875rem; color:#fff; }
+.input-field:focus { outline:none; border-color:#00f2ff; box-shadow:0 0 0 1px #00f2ff; }
+.loading-overlay { position:fixed; inset:0; z-index:999; background:rgba(9,9,14,.9); display:flex; align-items:center; justify-content:center; }
+.spinner { width:48px; height:48px; border:4px solid rgba(0,242,255,.2); border-top-color:#00f2ff; border-radius:50%; animation: spin 1s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+::-webkit-scrollbar { width:8px; } ::-webkit-scrollbar-thumb { background:#1e1e2e; border-radius:4px; }
+.list-item { display:flex; align-items:center; gap:8px; padding:8px 12px; background:rgba(0,0,0,.4); border:1px solid #1e293b; border-radius:12px; }
+.list-item input { flex:1; background:transparent; border:none; color:#fff; font-size:.875rem; }
+.list-item input:focus { outline:none; }
+.mini-btn { width:32px; height:32px; border-radius:8px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+</style>
+</head>
+<body class="font-sans antialiased min-h-screen">
+
+<div id="loadingOverlay" class="loading-overlay">
+    <div class="text-center">
+        <div class="spinner mx-auto"></div>
+        <p id="loadingText" class="text-cyber-cyan font-orbitron text-sm mt-4">Verificando sesión...</p>
+    </div>
+</div>
+
+<div id="adminApp" class="hidden">
+<header class="sticky top-0 z-40 bg-[#09090e]/95 backdrop-blur-md border-b border-cyan-500/20">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+        <div class="flex items-center gap-3">
+            <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-cyber-cyan to-cyber-magenta flex items-center justify-center font-orbitron font-black text-black">X</div>
+            <div>
+                <span class="font-orbitron font-bold text-white text-sm sm:text-base">ADMINISTRACIÓN</span>
+                <p class="text-[10px] text-cyber-cyan flex items-center gap-1">
+                    <span id="syncDot" class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                    <span id="syncStatus">Listo</span>
+                </p>
+            </div>
+        </div>
+        <div class="flex items-center gap-2">
+            <a href="planilla.html" class="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-orbitron text-white border border-slate-700 flex items-center gap-1.5">
+                <i data-lucide="clipboard-list" class="w-3.5 h-3.5"></i> <span class="hidden sm:inline">Planilla</span>
+            </a>
+            <a href="index.html" target="_blank" class="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-orbitron text-white border border-slate-700 flex items-center gap-1.5">
+                <i data-lucide="eye" class="w-3.5 h-3.5"></i> <span class="hidden sm:inline">Tienda</span>
+            </a>
+            <button onclick="toggleMaintenance()" id="maintenanceBtn" class="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-orbitron text-white border border-slate-700 flex items-center gap-1.5">
+                <i data-lucide="wrench" class="w-3.5 h-3.5"></i> <span id="maintenanceBtnText" class="hidden sm:inline">Mantenimiento</span>
+            </button>
+            <button onclick="logout()" class="px-3 py-2 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-xs font-orbitron text-rose-400 border border-rose-500/30 flex items-center gap-1.5">
+                <i data-lucide="log-out" class="w-3.5 h-3.5"></i> <span class="hidden sm:inline">Salir</span>
+            </button>
+        </div>
+    </div>
+</header>
+
+<main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+    <div class="flex gap-2 border-b border-slate-800 overflow-x-auto">
+        <button onclick="switchTab('games')" id="tab-games" class="tab-btn px-4 py-3 font-orbitron text-sm font-bold text-cyber-cyan border-b-2 border-cyber-cyan whitespace-nowrap flex items-center gap-2">
+            <i data-lucide="gamepad-2" class="w-4 h-4"></i> Juegos
+        </button>
+        <button onclick="switchTab('payments')" id="tab-payments" class="tab-btn px-4 py-3 font-orbitron text-sm font-bold text-gray-400 hover:text-white whitespace-nowrap flex items-center gap-2">
+            <i data-lucide="credit-card" class="w-4 h-4"></i> Pagos
+        </button>
+        <button onclick="switchTab('lists')" id="tab-lists" class="tab-btn px-4 py-3 font-orbitron text-sm font-bold text-gray-400 hover:text-white whitespace-nowrap flex items-center gap-2">
+            <i data-lucide="list" class="w-4 h-4"></i> Listas
+        </button>
+        <button onclick="switchTab('hero')" id="tab-hero" class="tab-btn px-4 py-3 font-orbitron text-sm font-bold text-gray-400 hover:text-white whitespace-nowrap flex items-center gap-2">
+            <i data-lucide="sparkles" class="w-4 h-4"></i> Hero
+        </button>
+        <button onclick="switchTab('backup')" id="tab-backup" class="tab-btn px-4 py-3 font-orbitron text-sm font-bold text-gray-400 hover:text-white whitespace-nowrap flex items-center gap-2">
+            <i data-lucide="database" class="w-4 h-4"></i> Respaldo
+        </button>
+    </div>
+
+    <section id="panel-games" class="space-y-6">
+        <div class="flex items-center justify-between flex-wrap gap-3">
+            <div>
+                <h2 class="font-orbitron text-xl font-bold text-white">Gestión de Juegos</h2>
+                <p class="text-xs text-gray-400">Edita precios, paquetes, ofertas y configuración de ID.</p>
+            </div>
+            <div class="flex gap-2">
+                <button onclick="reloadFromServer()" class="px-4 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white font-orbitron font-bold text-sm hover:border-cyber-cyan flex items-center gap-2">
+                    <i data-lucide="refresh-cw" class="w-4 h-4"></i> Recargar
+                </button>
+                <button onclick="openGameModal()" class="px-4 py-2.5 rounded-xl bg-cyber-cyan text-black font-orbitron font-bold text-sm flex items-center gap-2">
+                    <i data-lucide="plus" class="w-4 h-4"></i> Agregar
+                </button>
+            </div>
+        </div>
+        <div id="gamesAdminList" class="space-y-4"></div>
+    </section>
+
+    <section id="panel-payments" class="hidden space-y-6">
+        <div class="flex items-center justify-between flex-wrap gap-3">
+            <div>
+                <h2 class="font-orbitron text-xl font-bold text-white">Métodos de Pago</h2>
+                <p class="text-xs text-gray-400">Cada método incluye tasa, QR y datos de cobro editables.</p>
+            </div>
+            <button onclick="openPaymentModal()" class="px-4 py-2.5 rounded-xl bg-cyber-cyan text-black font-orbitron font-bold text-sm flex items-center gap-2">
+                <i data-lucide="plus" class="w-4 h-4"></i> Agregar Método
+            </button>
+        </div>
+        <div id="paymentsAdminList" class="space-y-3"></div>
+    </section>
+
+    <section id="panel-lists" class="hidden space-y-6">
+        <div>
+            <h2 class="font-orbitron text-xl font-bold text-white">Listas Desplegables</h2>
+            <p class="text-xs text-gray-400">Bancos y juegos que aparecen en los selectores de la planilla y en la tienda.</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="glass-card rounded-2xl p-4 space-y-3">
+                <div class="flex items-center justify-between">
+                    <h3 class="font-orbitron font-bold text-white text-sm flex items-center gap-2">
+                        <i data-lucide="landmark" class="w-4 h-4 text-cyber-cyan"></i> Bancos
+                    </h3>
+                    <span id="adminBancosCount" class="text-[10px] text-gray-500"></span>
+                </div>
+                <div id="adminBancosList" class="space-y-1.5 max-h-96 overflow-y-auto"></div>
+                <div class="flex gap-2 pt-2 border-t border-slate-800">
+                    <input type="text" id="adminNewBanco" class="input-field text-sm flex-1" placeholder="Nuevo banco...">
+                    <button onclick="adminAddBanco()" class="px-3 py-2 rounded-lg bg-cyber-cyan text-black font-orbitron font-bold text-xs"><i data-lucide="plus" class="w-3.5 h-3.5"></i></button>
+                </div>
+            </div>
+
+            <div class="glass-card rounded-2xl p-4 space-y-3">
+                <div class="flex items-center justify-between">
+                    <h3 class="font-orbitron font-bold text-white text-sm flex items-center gap-2">
+                        <i data-lucide="gamepad-2" class="w-4 h-4 text-cyber-magenta"></i> Juegos
+                    </h3>
+                    <span id="adminJuegosCount" class="text-[10px] text-gray-500"></span>
+                </div>
+                <div id="adminJuegosList" class="space-y-1.5 max-h-96 overflow-y-auto"></div>
+                <div class="flex gap-2 pt-2 border-t border-slate-800">
+                    <input type="text" id="adminNewJuego" class="input-field text-sm flex-1" placeholder="Nuevo juego...">
+                    <button onclick="adminAddJuego()" class="px-3 py-2 rounded-lg bg-cyber-magenta text-white font-orbitron font-bold text-xs"><i data-lucide="plus" class="w-3.5 h-3.5"></i></button>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex gap-2 flex-wrap">
+            <button onclick="saveListsAdmin()" class="flex-1 py-3 rounded-xl font-orbitron font-bold text-black bg-gradient-to-r from-cyber-cyan to-blue-400 flex items-center justify-center gap-2">
+                <i data-lucide="save" class="w-5 h-5"></i> GUARDAR LISTAS
+            </button>
+            <button onclick="reloadListsAdmin()" class="px-5 py-3 rounded-xl font-orbitron font-bold text-white bg-slate-800 border border-slate-700 flex items-center gap-2">
+                <i data-lucide="refresh-cw" class="w-4 h-4"></i> Recargar
+            </button>
+        </div>
+    </section>
+
+    <section id="panel-hero" class="hidden space-y-6">
+        <div class="flex items-center justify-between flex-wrap gap-3">
+            <div>
+                <h2 class="font-orbitron text-xl font-bold text-white">Tarjetas del Hero</h2>
+                <p class="text-xs text-gray-400">4 tarjetas decorativas.</p>
+            </div>
+            <button onclick="saveHero()" id="saveHeroBtn" class="px-4 py-2.5 rounded-xl bg-cyber-cyan text-black font-orbitron font-bold text-sm flex items-center gap-2">
+                <i data-lucide="save" class="w-4 h-4"></i> Guardar
+            </button>
+        </div>
+        <div id="heroAdminList" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+    </section>
+
+    <section id="panel-backup" class="hidden space-y-6 max-w-2xl">
+        <h2 class="font-orbitron text-xl font-bold text-white">Respaldo y Restauración</h2>
+        <div class="glass-card rounded-2xl p-6 space-y-4">
+            <button onclick="exportConfig()" class="w-full py-3 rounded-xl font-orbitron font-bold text-black bg-gradient-to-r from-emerald-400 to-emerald-500 flex items-center justify-center gap-2">
+                <i data-lucide="download" class="w-5 h-5"></i> EXPORTAR (.json)
+            </button>
+            <div>
+                <label class="block text-xs font-orbitron font-bold text-gray-300 uppercase mb-2">Importar</label>
+                <input type="file" id="importFile" accept=".json" class="input-field">
+            </div>
+            <button onclick="importConfig()" class="w-full py-3 rounded-xl font-orbitron font-bold text-white bg-slate-800 border border-slate-700 flex items-center justify-center gap-2">
+                <i data-lucide="upload" class="w-5 h-5"></i> IMPORTAR
+            </button>
+            <div class="pt-4 border-t border-slate-800">
+                <button onclick="factoryReset()" class="w-full py-3 rounded-xl font-orbitron font-bold text-rose-400 bg-rose-500/10 border border-rose-500/30 flex items-center justify-center gap-2">
+                    <i data-lucide="alert-triangle" class="w-5 h-5"></i> RESTAURAR DE FÁBRICA
+                </button>
+            </div>
+        </div>
+    </section>
+</main>
+</div>
+
+<!-- MODAL JUEGO -->
+<div id="gameModal" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
+<div class="glass-card w-full max-w-3xl rounded-3xl border border-cyber-cyan/40 overflow-hidden my-8">
+    <div class="p-5 border-b border-slate-800 flex items-center justify-between bg-gradient-to-r from-cyber-card to-slate-900">
+        <h3 id="gameModalTitle" class="font-orbitron font-bold text-lg text-white">Editar Juego</h3>
+        <button onclick="closeGameModal()" class="w-8 h-8 rounded-full bg-slate-800 text-gray-400 flex items-center justify-center"><i data-lucide="x" class="w-5 h-5"></i></button>
+    </div>
+    <div class="p-6 space-y-5 max-h-[75vh] overflow-y-auto">
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div><label class="block text-xs font-orbitron font-bold text-gray-300 uppercase mb-2">Clave</label><input type="text" id="gm-key" class="input-field font-mono" readonly></div>
+            <div><label class="block text-xs font-orbitron font-bold text-gray-300 uppercase mb-2">Nombre</label><input type="text" id="gm-title" class="input-field"></div>
+            <div><label class="block text-xs font-orbitron font-bold text-gray-300 uppercase mb-2">Ícono</label><input type="text" id="gm-icon" class="input-field" maxlength="4"></div>
+            <div class="sm:col-span-3"><label class="block text-xs font-orbitron font-bold text-gray-300 uppercase mb-2">URL logo</label><input type="url" id="gm-logo" class="input-field font-mono"></div>
+            <div><label class="block text-xs font-orbitron font-bold text-gray-300 uppercase mb-2">Oferta %</label><input type="number" id="gm-discount" class="input-field font-mono" value="0" min="0" max="99"></div>
+            <div class="sm:col-span-2"><label class="block text-xs font-orbitron font-bold text-gray-300 uppercase mb-2">URL portada</label><input type="url" id="gm-cover" class="input-field font-mono"></div>
+            <div class="sm:col-span-3"><label class="block text-xs font-orbitron font-bold text-gray-300 uppercase mb-2">Descripción</label><input type="text" id="gm-desc" class="input-field"></div>
+            <div class="sm:col-span-3"><label class="block text-xs font-orbitron font-bold text-gray-300 uppercase mb-2">Etiquetas</label><input type="text" id="gm-tags" class="input-field" placeholder="Popular, Oferta"></div>
+        </div>
+        <div class="pt-2 border-t border-slate-800">
+            <label class="flex items-center justify-between gap-3 cursor-pointer p-3 rounded-xl bg-black/40 border border-slate-800 mb-3">
+                <div><p class="text-sm font-bold text-white">Solicitar ID</p></div>
+                <div class="relative">
+                    <input type="checkbox" id="gm-idEnabled" class="sr-only peer" checked>
+                    <div class="w-11 h-6 bg-slate-700 peer-checked:bg-cyber-cyan rounded-full transition-colors after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-5"></div>
+                </div>
+            </label>
+            <div id="gm-idOptions" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div class="sm:col-span-2">
+                    <label class="block text-xs font-orbitron font-bold text-gray-300 uppercase mb-2">Modo ID</label>
+                    <select id="gm-idMode" class="input-field">
+                        <option value="id">Solo ID</option>
+                        <option value="id_server">ID + Server</option>
+                        <option value="no_id">Sin ID</option>
+                    </select>
+                </div>
+                <div id="gm-minIdWrap"><label class="block text-xs font-orbitron font-bold text-gray-300 uppercase mb-2">Longitud mínima</label><input type="number" id="gm-minId" class="input-field font-mono" value="8" min="1" max="30"></div>
+            </div>
+        </div>
+        <div class="pt-2 border-t border-slate-800">
+            <div class="flex items-center justify-between mb-3">
+                <label class="block text-xs font-orbitron font-bold text-gray-300 uppercase">Paquetes (USDT)</label>
+                <button onclick="addPackageRow()" class="px-3 py-1.5 rounded-lg bg-cyber-cyan/10 text-cyber-cyan border border-cyber-cyan/30 font-orbitron text-xs font-bold flex items-center gap-1"><i data-lucide="plus" class="w-3 h-3"></i> Añadir</button>
+            </div>
+            <div id="packagesContainer" class="space-y-2"></div>
+        </div>
+        <div class="flex gap-2 pt-2">
+            <button onclick="saveGame()" id="saveGameBtn" class="flex-1 py-3 rounded-xl font-orbitron font-bold text-black bg-gradient-to-r from-cyber-cyan to-blue-400">GUARDAR</button>
+            <button onclick="deleteGame()" id="deleteGameBtn" class="hidden px-5 py-3 rounded-xl font-orbitron font-bold text-rose-400 bg-rose-500/10 border border-rose-500/30"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+        </div>
+    </div>
+</div>
+</div>
+
+<!-- MODAL PAGO -->
+<div id="paymentModal" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
+<div class="glass-card w-full max-w-2xl rounded-3xl border border-cyber-cyan/40 overflow-hidden my-8">
+    <div class="p-5 border-b border-slate-800 flex items-center justify-between bg-gradient-to-r from-cyber-card to-slate-900">
+        <h3 id="paymentModalTitle" class="font-orbitron font-bold text-lg text-white">Método de Pago</h3>
+        <button onclick="closePaymentModal()" class="w-8 h-8 rounded-full bg-slate-800 text-gray-400 flex items-center justify-center"><i data-lucide="x" class="w-5 h-5"></i></button>
+    </div>
+    <div class="p-6 space-y-4 max-h-[75vh] overflow-y-auto">
+        <div class="grid grid-cols-2 gap-4">
+            <div><label class="block text-xs font-orbitron font-bold text-gray-300 uppercase mb-2">Nombre</label><input type="text" id="pm-name" class="input-field"></div>
+            <div><label class="block text-xs font-orbitron font-bold text-gray-300 uppercase mb-2">Ícono</label><input type="text" id="pm-icon" class="input-field" maxlength="4"></div>
+            <div><label class="block text-xs font-orbitron font-bold text-gray-300 uppercase mb-2">Código moneda</label><input type="text" id="pm-code" class="input-field font-mono"></div>
+            <div><label class="block text-xs font-orbitron font-bold text-gray-300 uppercase mb-2">Etiqueta</label><input type="text" id="pm-label" class="input-field font-mono"></div>
+            <div><label class="block text-xs font-orbitron font-bold text-gray-300 uppercase mb-2">Símbolo</label><input type="text" id="pm-symbol" class="input-field font-mono"></div>
+            <div><label class="block text-xs font-orbitron font-bold text-gray-300 uppercase mb-2">Decimales</label><input type="number" id="pm-decimals" class="input-field font-mono" value="2" min="0" max="4"></div>
+            <div class="col-span-2"><label class="block text-xs font-orbitron font-bold text-gray-300 uppercase mb-2">Tasa (por 1 USDT)</label><input type="number" id="pm-rate" class="input-field font-mono" step="0.01" min="0.01" value="1"></div>
+        </div>
+
+        <!-- QR -->
+        <div class="pt-3 border-t border-slate-800">
+            <label class="block text-xs font-orbitron font-bold text-cyber-cyan uppercase mb-2">QR del método (opcional)</label>
+            <div class="flex flex-col sm:flex-row gap-3">
+                <div class="flex-1 space-y-2">
+                    <input type="url" id="pm-qr-url" class="input-field font-mono text-xs" placeholder="https://... (URL de la imagen QR)">
+                    <div class="flex gap-2">
+                        <input type="file" id="pm-qr-file" accept="image/*" class="input-field text-xs">
+                        <button onclick="removeQr()" class="px-3 py-2 rounded-lg bg-rose-500/10 text-rose-400 border border-rose-500/30 text-xs font-orbitron font-bold whitespace-nowrap">Quitar</button>
+                    </div>
+                    <p class="text-[10px] text-gray-500">Pega una URL o sube una imagen desde tu PC/celular (se comprime).</p>
+                </div>
+                <div class="w-32 h-32 rounded-xl border border-slate-700 bg-black/40 flex items-center justify-center overflow-hidden shrink-0 mx-auto sm:mx-0">
+                    <img id="pm-qr-preview" class="w-full h-full object-contain hidden">
+                    <span id="pm-qr-empty" class="text-[10px] text-gray-500 text-center px-2">Sin QR</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="pt-3 border-t border-slate-800">
+            <div class="flex items-center justify-between mb-3">
+                <label class="block text-xs font-orbitron font-bold text-cyber-cyan uppercase">Datos de cobro</label>
+                <button onclick="addFieldRow()" class="px-3 py-1.5 rounded-lg bg-cyber-cyan/10 text-cyber-cyan border border-cyber-cyan/30 font-orbitron text-xs font-bold flex items-center gap-1"><i data-lucide="plus" class="w-3 h-3"></i> Añadir campo</button>
+            </div>
+            <div id="fieldsContainer" class="space-y-2"></div>
+            <p class="text-[10px] text-gray-500 mt-1">Ej: "Banco" → "Mercantil" · "Teléfono" → "0414-1234567"</p>
+        </div>
+
+        <div class="pt-3 border-t border-slate-800 grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <label class="flex items-center gap-3 cursor-pointer p-3 rounded-xl bg-black/40 border border-slate-800">
+                <input type="checkbox" id="pm-askReference" class="w-5 h-5 accent-cyber-cyan" checked>
+                <span class="text-xs font-bold text-white">Pedir referencia</span>
+            </label>
+            <label class="flex items-center gap-3 cursor-pointer p-3 rounded-xl bg-black/40 border border-slate-800">
+                <input type="checkbox" id="pm-askBank" class="w-5 h-5 accent-cyber-cyan" checked>
+                <span class="text-xs font-bold text-white">Pedir banco emisor</span>
+            </label>
+            <label class="flex items-center gap-3 cursor-pointer p-3 rounded-xl bg-black/40 border border-slate-800">
+                <input type="checkbox" id="pm-askCapture" class="w-5 h-5 accent-cyber-cyan" checked>
+                <span class="text-xs font-bold text-white">Pedir captura</span>
+            </label>
+        </div>
+
+        <div class="flex items-center gap-3 p-3 rounded-xl bg-black/40 border border-slate-800">
+            <input type="checkbox" id="pm-enabled" class="w-5 h-5 accent-cyber-cyan" checked>
+            <span class="text-sm font-bold text-white">Método activo</span>
+        </div>
+
+        <div class="flex gap-2 pt-2">
+            <button onclick="savePayment()" class="flex-1 py-3 rounded-xl font-orbitron font-bold text-black bg-gradient-to-r from-cyber-cyan to-blue-400">GUARDAR</button>
+            <button onclick="deletePayment()" id="deletePaymentBtn" class="hidden px-5 py-3 rounded-xl font-orbitron font-bold text-rose-400 bg-rose-500/10 border border-rose-500/30"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+        </div>
+    </div>
+</div>
+</div>
+
+<div id="toast" class="fixed bottom-6 right-6 z-[100] hidden">
+    <div class="glass-card px-5 py-3 rounded-xl border border-cyber-cyan/40 flex items-center gap-3">
+        <i data-lucide="check-circle" class="w-5 h-5 text-emerald-400"></i>
+        <span id="toastText" class="text-sm text-white">Guardado</span>
+    </div>
+</div>
+
+<script>
+const API_URL = 'api/config';
+const AUTH_URL = 'api/auth';
+const LISTS_URL = 'api/lists';
+
+const DEFAULT_PAYMENTS = [
+    { id:'pm-1', name:'Pago Móvil', code:'VES', label:'Bs.', symbol:'Bs.', decimals:2, icon:'🇻🇪', enabled:true, rate:40,
+      fields:[ {label:'Banco',value:'Mercantil'}, {label:'Teléfono',value:'0414-1234567'}, {label:'Cédula',value:'V-12345678'}, {label:'Titular',value:''} ],
+      askReference:true, askBank:true, askCapture:true, qr:'' },
+    { id:'pm-2', name:'Binance Pay', code:'USDT', label:'USDT', symbol:'USDT', decimals:2, icon:'🟡', enabled:true, rate:1,
+      fields:[ {label:'Pay ID',value:''}, {label:'Red',value:'TRC20'} ],
+      askReference:true, askBank:false, askCapture:true, qr:'' },
+    { id:'pm-3', name:'Nequi', code:'COP', label:'COP', symbol:'COP$', decimals:0, icon:'🇨🇴', enabled:true, rate:4000,
+      fields:[ {label:'Número',value:''}, {label:'Titular',value:''} ],
+      askReference:true, askBank:false, askCapture:true, qr:'' }
+];
+const DEFAULT_HERO_CARDS = [
+    { id:'card-1', image:'', emoji:'💎', gradient:'from-amber-500/20 to-red-600/30', marginTop:0 },
+    { id:'card-2', image:'', emoji:'🔷', gradient:'from-blue-600/20 to-purple-600/30', marginTop:16 },
+    { id:'card-3', image:'', emoji:'🪙', gradient:'from-cyan-600/20 to-blue-800/30', marginTop:-8 },
+    { id:'card-4', image:'', emoji:'🥇', gradient:'from-rose-600/20 to-orange-600/30', marginTop:8 }
+];
+const GRADIENT_OPTIONS = [
+    { value:'from-amber-500/20 to-red-600/30', label:'🟠 Ámbar → Rojo' },
+    { value:'from-blue-600/20 to-purple-600/30', label:'🔵 Azul → Púrpura' },
+    { value:'from-cyan-600/20 to-blue-800/30', label:'🩵 Cian → Azul' },
+    { value:'from-rose-600/20 to-orange-600/30', label:'🔴 Rosa → Naranja' },
+    { value:'from-emerald-500/20 to-teal-600/30', label:'💚 Esmeralda → Teal' },
+    { value:'from-fuchsia-600/20 to-pink-600/30', label:'💗 Fucsia → Rosa' },
+    { value:'from-violet-600/20 to-indigo-600/30', label:'💜 Violeta → Índigo' },
+    { value:'from-yellow-400/20 to-amber-600/30', label:'🟡 Amarillo → Ámbar' },
+    { value:'from-slate-500/20 to-slate-800/40', label:'⚫ Gris → Negro' },
+    { value:'from-cyber-cyan/20 to-cyber-magenta/30', label:'⚡ Cian → Magenta' }
+];
+const DEFAULT_CONFIG = {
+    paymentMethods: DEFAULT_PAYMENTS,
+    maintenance: false,
+    heroCards: DEFAULT_HERO_CARDS,
+    games: {
+        freefire: {
+            title:"Free Fire", icon:"💎", minIdLength:8,
+            description:"Recarga diamantes al instante.",
+            cover:"https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&w=600&q=80",
+            logo:"", tags:["Popular"], idMode:"id", idEnabled:true, paused:false, discount:0,
+            packages:[ {id:'ff-100', name:"100 Diamantes", price:1.20}, {id:'ff-310', name:"310 Diamantes", price:3.50} ]
+        }
+    }
+};
+
+let config = JSON.parse(JSON.stringify(DEFAULT_CONFIG));
+let listsServer = { bancos:[], juegos:[] };
+let editingGameKey = null;
+let editingPaymentId = null;
+let tempPackages = [];
+let tempFields = [];
+
+function showLoading(text='Cargando...'){ document.getElementById('loadingText').innerText=text; document.getElementById('loadingOverlay').classList.remove('hidden'); }
+function hideLoading(){ document.getElementById('loadingOverlay').classList.add('hidden'); }
+function setSyncStatus(text, ok=true){ const d=document.getElementById('syncDot'); d.className=`w-1.5 h-1.5 rounded-full ${ok?'bg-emerald-400':'bg-rose-400'}`; document.getElementById('syncStatus').innerText=text; }
+function toObject(input){ if(!input)return{}; if(Array.isArray(input)){ const o={}; Object.keys(input).forEach(k=>o[k]=input[k]); return o; } return typeof input==='object'?input:{}; }
+function escapeHtml(s){ return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+document.addEventListener('DOMContentLoaded', async () => {
+    lucide.createIcons();
+    document.getElementById('gm-idEnabled')?.addEventListener('change', toggleIdOptionsUI);
+    document.getElementById('gm-idMode')?.addEventListener('change', toggleIdOptionsUI);
+    document.getElementById('pm-qr-url')?.addEventListener('input', ()=> updateQrPreview());
+    document.getElementById('pm-qr-file')?.addEventListener('change', onQrFileSelected);
+
+    try {
+        const res = await fetch(`${AUTH_URL}?action=guard`);
+        if (!res.ok){ location.replace('login.html?next=admin.html'); return; }
+        const data = await res.json();
+        if (!data.ok){ location.replace('login.html?next=admin.html'); return; }
+    } catch(e){ location.replace('login.html?next=admin.html'); return; }
+
+    document.getElementById('adminApp').classList.remove('hidden');
+    await loadConfig();
+    await loadListsAdmin();
+    hideLoading();
+    renderGamesAdmin(); renderPaymentsAdmin(); renderHeroAdmin(); updateMaintenanceBtn();
+    lucide.createIcons();
+});
+
+async function logout(){ try { await fetch(`${AUTH_URL}?action=logout`); } catch(e){} location.replace('login.html'); }
+
+async function loadConfig(){
+    try {
+        setSyncStatus('Sincronizando...', true);
+        const res = await fetch(`${API_URL}?t=${Date.now()}`, { cache:'no-cache' });
+        if (!res.ok) throw new Error('HTTP '+res.status);
+        const data = await res.json();
+        config.games = toObject(data.games || config.games);
+        config.paymentMethods = (data.paymentMethods && data.paymentMethods.length) ? data.paymentMethods : config.paymentMethods;
+        config.maintenance = data.maintenance === true;
+        config.heroCards = (data.heroCards && data.heroCards.length===4) ? data.heroCards : config.heroCards;
+        normalizeConfig();
+        setSyncStatus('Sincronizado', true);
+    } catch(e){ setSyncStatus('Sin conexión', false); toast('Sin conexión', 'error'); }
+}
+
+function normalizeConfig(){
+    if (!config.games || Object.keys(config.games).length===0) config.games = JSON.parse(JSON.stringify(DEFAULT_CONFIG.games));
+    config.games = toObject(config.games);
+    if (!Array.isArray(config.paymentMethods) || config.paymentMethods.length===0) config.paymentMethods = JSON.parse(JSON.stringify(DEFAULT_PAYMENTS));
+    if (typeof config.maintenance !== 'boolean') config.maintenance = false;
+    if (!Array.isArray(config.heroCards) || config.heroCards.length!==4) config.heroCards = JSON.parse(JSON.stringify(DEFAULT_HERO_CARDS));
+
+    config.paymentMethods.forEach(pm => {
+        if (typeof pm.rate !== 'number' || pm.rate <= 0) pm.rate = 1;
+        if (typeof pm.enabled !== 'boolean') pm.enabled = true;
+        if (!Array.isArray(pm.fields)) pm.fields = [];
+        if (typeof pm.askReference !== 'boolean') pm.askReference = true;
+        if (typeof pm.askBank !== 'boolean') pm.askBank = (pm.code === 'VES');
+        if (typeof pm.askCapture !== 'boolean') pm.askCapture = true;
+        if (typeof pm.qr !== 'string') pm.qr = '';
+    });
+    Object.keys(config.games).forEach(k => {
+        const g = config.games[k];
+        if (typeof g.idEnabled !== 'boolean') g.idEnabled = true;
+        if (!g.idMode) g.idMode = 'id';
+        if (typeof g.paused !== 'boolean') g.paused = false;
+        if (typeof g.discount !== 'number') g.discount = 0;
+        if (typeof g.logo !== 'string') g.logo = '';
+        if (!Array.isArray(g.tags)) g.tags = [];
+    });
+}
+
+async function saveConfig(){
+    try {
+        setSyncStatus('Guardando...', true);
+        const res = await fetch(API_URL, {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({ games: config.games, paymentMethods: config.paymentMethods, maintenance: config.maintenance, heroCards: config.heroCards })
+        });
+        if (!res.ok) throw new Error('HTTP '+res.status);
+        const data = await res.json();
+        if (!data.ok) throw new Error(data.error || 'Error');
+        setSyncStatus('Sincronizado', true);
+        return true;
+    } catch(e){ setSyncStatus('Error', false); toast('Error al guardar', 'error'); return false; }
+}
+
+async function reloadFromServer(){ if(!confirm('¿Recargar?'))return; showLoading('Recargando...'); await loadConfig(); await loadListsAdmin(); hideLoading(); renderGamesAdmin(); renderPaymentsAdmin(); renderHeroAdmin(); updateMaintenanceBtn(); toast('Recargado'); }
+
+function switchTab(tab){
+    ['games','payments','lists','hero','backup'].forEach(t=>{
+        document.getElementById('panel-'+t).classList.toggle('hidden', t!==tab);
+        const btn=document.getElementById('tab-'+t);
+        if(t===tab){ btn.classList.add('text-cyber-cyan','border-b-2','border-cyber-cyan'); btn.classList.remove('text-gray-400'); }
+        else { btn.classList.remove('text-cyber-cyan','border-b-2','border-cyber-cyan'); btn.classList.add('text-gray-400'); }
+    });
+}
+
+// ============ LISTAS ============
+async function loadListsAdmin(){
+    try {
+        const res = await fetch(`${LISTS_URL}?t=${Date.now()}`, { cache:'no-cache' });
+        const data = await res.json();
+        listsServer.bancos = Array.isArray(data.bancos) ? data.bancos : [];
+        listsServer.juegos  = Array.isArray(data.juegos)  ? data.juegos  : [];
+        renderListsAdmin();
+    } catch(e){ toast('Error al cargar listas','error'); }
+}
+function renderListsAdmin(){
+    document.getElementById('adminBancosCount').innerText = listsServer.bancos.length + ' items';
+    document.getElementById('adminJuegosCount').innerText = listsServer.juegos.length + ' items';
+    document.getElementById('adminBancosList').innerHTML = listsServer.bancos.map((b,i)=>`
+        <div class="list-item">
+            <input type="text" value="${escapeHtml(b)}" onchange="updateListItemAdmin('bancos',${i},this.value)">
+            <button onclick="moveItemAdmin('bancos',${i},-1)" class="mini-btn bg-slate-800 text-gray-400 ${i===0?'opacity-30 pointer-events-none':''}"><i data-lucide="chevron-up" class="w-3.5 h-3.5"></i></button>
+            <button onclick="moveItemAdmin('bancos',${i},1)" class="mini-btn bg-slate-800 text-gray-400 ${i===listsServer.bancos.length-1?'opacity-30 pointer-events-none':''}"><i data-lucide="chevron-down" class="w-3.5 h-3.5"></i></button>
+            <button onclick="removeListItemAdmin('bancos',${i})" class="mini-btn bg-rose-500/10 text-rose-400 border border-rose-500/30"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+        </div>`).join('') || '<p class="text-xs text-gray-500 italic text-center py-4">Sin bancos.</p>';
+    document.getElementById('adminJuegosList').innerHTML = listsServer.juegos.map((j,i)=>`
+        <div class="list-item">
+            <input type="text" value="${escapeHtml(j)}" onchange="updateListItemAdmin('juegos',${i},this.value)">
+            <button onclick="moveItemAdmin('juegos',${i},-1)" class="mini-btn bg-slate-800 text-gray-400 ${i===0?'opacity-30 pointer-events-none':''}"><i data-lucide="chevron-up" class="w-3.5 h-3.5"></i></button>
+            <button onclick="moveItemAdmin('juegos',${i},1)" class="mini-btn bg-slate-800 text-gray-400 ${i===listsServer.juegos.length-1?'opacity-30 pointer-events-none':''}"><i data-lucide="chevron-down" class="w-3.5 h-3.5"></i></button>
+            <button onclick="removeListItemAdmin('juegos',${i})" class="mini-btn bg-rose-500/10 text-rose-400 border border-rose-500/30"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+        </div>`).join('') || '<p class="text-xs text-gray-500 italic text-center py-4">Sin juegos.</p>';
+    lucide.createIcons();
+}
+function updateListItemAdmin(key,idx,val){
+    const trimmed = val.trim();
+    if (trimmed === ''){ toast('No puede estar vacío','error'); renderListsAdmin(); return; }
+    if (listsServer[key].some((x,i)=> i!==idx && x.toLowerCase()===trimmed.toLowerCase())){ toast('Ya existe','error'); renderListsAdmin(); return; }
+    listsServer[key][idx] = trimmed;
+    renderListsAdmin();
+}
+function moveItemAdmin(key,idx,delta){
+    const arr = listsServer[key]; const j = idx+delta;
+    if (j<0||j>=arr.length) return;
+    [arr[idx], arr[j]] = [arr[j], arr[idx]];
+    renderListsAdmin();
+}
+function removeListItemAdmin(key,idx){ if(!confirm('¿Eliminar?'))return; listsServer[key].splice(idx,1); renderListsAdmin(); }
+function adminAddBanco(){
+    const input = document.getElementById('adminNewBanco'); const v = input.value.trim(); if(!v) return;
+    if (listsServer.bancos.some(b=>b.toLowerCase()===v.toLowerCase())){ toast('Ya existe','error'); return; }
+    listsServer.bancos.push(v); input.value=''; renderListsAdmin();
+}
+function adminAddJuego(){
+    const input = document.getElementById('adminNewJuego'); const v = input.value.trim(); if(!v) return;
+    if (listsServer.juegos.some(j=>j.toLowerCase()===v.toLowerCase())){ toast('Ya existe','error'); return; }
+    listsServer.juegos.push(v); input.value=''; renderListsAdmin();
+}
+async function saveListsAdmin(){
+    if (listsServer.bancos.length===0 || listsServer.juegos.length===0){ toast('Debe haber al menos 1 banco y 1 juego','error'); return; }
+    try {
+        const res = await fetch(`${LISTS_URL}?action=save`, {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({ bancos: listsServer.bancos, juegos: listsServer.juegos })
+        });
+        const data = await res.json();
+        if (!res.ok || !data.ok){ toast(data.error||'Error','error'); return; }
+        listsServer.bancos = data.lists.bancos;
+        listsServer.juegos = data.lists.juegos;
+        renderListsAdmin();
+        toast('Listas guardadas');
+    } catch(e){ toast('Error de conexión','error'); }
+}
+async function reloadListsAdmin(){ if(!confirm('¿Recargar?'))return; await loadListsAdmin(); toast('Listas recargadas'); }
+
+// ============ JUEGOS ============
+function renderGamesAdmin(){
+    const c = document.getElementById('gamesAdminList'); c.innerHTML='';
+    const keys = Object.keys(config.games);
+    if (keys.length===0){ c.innerHTML='<div class="glass-card p-8 rounded-2xl text-center text-gray-400">No hay juegos.</div>'; return; }
+    keys.forEach(key => {
+        const g = config.games[key];
+        const idInfo = (g.idEnabled===false||g.idMode==='no_id') ? '<span class="text-amber-400">Sin ID</span>' : (g.idMode==='id_server'?'<span class="text-purple-300">ID+Server</span>':'<span class="text-cyber-cyan">Solo ID</span>');
+        const pausedBadge = g.paused?'<span class="bg-amber-500 text-black text-[10px] font-bold px-2 py-0.5 rounded-full ml-2">⏸</span>':'';
+        const discBadge = (g.discount>0 && !g.paused)?`<span class="bg-rose-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full ml-2">-${g.discount}%</span>`:'';
+        const tagsHtml = (g.tags||[]).map(t=>`<span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-cyber-cyan/10 text-cyber-cyan border border-cyber-cyan/30">${escapeHtml(t)}</span>`).join('');
+        const logoHtml = g.logo?`<img src="${g.logo}" class="w-10 h-10 rounded-lg object-cover border border-slate-700">`:`<span class="text-2xl">${g.icon}</span>`;
+        const card = document.createElement('div');
+        card.className='glass-card rounded-2xl p-5 flex flex-col md:flex-row gap-4 items-center'+(g.paused?' opacity-70':'');
+        card.innerHTML = `
+            <div class="w-24 h-20 rounded-xl bg-cover bg-center shrink-0 border border-slate-700" style="background-image:url('${g.cover}')"></div>
+            <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2 flex-wrap">
+                    ${logoHtml}<h3 class="font-orbitron font-bold text-white truncate">${escapeHtml(g.title)}</h3>
+                    <span class="text-[10px] font-mono text-gray-500 bg-slate-800 px-2 py-0.5 rounded">${key}</span>${pausedBadge}${discBadge}
+                </div>
+                <p class="text-xs text-gray-400 mt-1 truncate">${escapeHtml(g.description||'')}</p>
+                <div class="flex gap-1 mt-1 flex-wrap">${tagsHtml}</div>
+                <p class="text-[11px] mt-1">${g.packages.length} paquete(s) · ${idInfo}</p>
+            </div>
+            <div class="flex gap-2 flex-wrap">
+                <button onclick="togglePause('${key}')" class="${g.paused?'bg-emerald-500/10 text-emerald-400 border-emerald-500/30':'bg-amber-500/10 text-amber-400 border-amber-500/30'} px-3 py-2 rounded-lg border font-orbitron text-xs font-bold flex items-center gap-1.5">
+                    <i data-lucide="${g.paused?'play':'pause'}" class="w-3.5 h-3.5"></i> ${g.paused?'Reactivar':'Pausar'}
+                </button>
+                <button onclick="openGameModal('${key}')" class="px-3 py-2 rounded-lg bg-cyber-cyan/10 text-cyber-cyan border border-cyber-cyan/30 font-orbitron text-xs font-bold flex items-center gap-1.5">
+                    <i data-lucide="pencil" class="w-3.5 h-3.5"></i> Editar
+                </button>
+            </div>`;
+        c.appendChild(card);
+    });
+    lucide.createIcons();
+}
+async function togglePause(key){
+    const g = config.games[key]; if(!g) return;
+    if (!confirm(`¿${g.paused?'Reactivar':'Pausar'} "${g.title}"?`)) return;
+    g.paused = !g.paused;
+    if (await saveConfig()){ renderGamesAdmin(); toast(g.paused?'Pausado':'Reactivado'); }
+}
+function openGameModal(key=null){
+    editingGameKey = key;
+    const dbtn = document.getElementById('deleteGameBtn');
+    if (key){
+        const g = config.games[key];
+        document.getElementById('gameModalTitle').innerText='Editar: '+g.title;
+        document.getElementById('gm-key').value=key;
+        document.getElementById('gm-title').value=g.title;
+        document.getElementById('gm-icon').value=g.icon;
+        document.getElementById('gm-logo').value=g.logo||'';
+        document.getElementById('gm-discount').value=g.discount||0;
+        document.getElementById('gm-minId').value=g.minIdLength||8;
+        document.getElementById('gm-cover').value=g.cover;
+        document.getElementById('gm-desc').value=g.description||'';
+        document.getElementById('gm-tags').value=(g.tags||[]).join(', ');
+        document.getElementById('gm-idMode').value=g.idMode||'id';
+        document.getElementById('gm-idEnabled').checked=g.idEnabled!==false;
+        tempPackages = JSON.parse(JSON.stringify(g.packages));
+        dbtn.classList.remove('hidden');
+    } else {
+        document.getElementById('gameModalTitle').innerText='Nuevo Juego';
+        document.getElementById('gm-key').value='(auto)';
+        document.getElementById('gm-title').value='';
+        document.getElementById('gm-icon').value='🎮';
+        document.getElementById('gm-logo').value='';
+        document.getElementById('gm-discount').value=0;
+        document.getElementById('gm-minId').value=8;
+        document.getElementById('gm-cover').value='';
+        document.getElementById('gm-desc').value='';
+        document.getElementById('gm-tags').value='';
+        document.getElementById('gm-idMode').value='id';
+        document.getElementById('gm-idEnabled').checked=true;
+        tempPackages = [];
+        dbtn.classList.add('hidden');
+    }
+    toggleIdOptionsUI(); renderPackagesEditor();
+    document.getElementById('gameModal').classList.remove('hidden');
+    document.body.style.overflow='hidden';
+    lucide.createIcons();
+}
+function closeGameModal(){ document.getElementById('gameModal').classList.add('hidden'); document.body.style.overflow=''; editingGameKey=null; tempPackages=[]; }
+function toggleIdOptionsUI(){
+    const en=document.getElementById('gm-idEnabled').checked;
+    const md=document.getElementById('gm-idMode').value;
+    const w=document.getElementById('gm-idOptions');
+    const m=document.getElementById('gm-minIdWrap');
+    if(!en) w.classList.add('opacity-40','pointer-events-none'); else w.classList.remove('opacity-40','pointer-events-none');
+    if(en && md!=='no_id') m.classList.remove('hidden'); else m.classList.add('hidden');
+}
+function renderPackagesEditor(){
+    const c=document.getElementById('packagesContainer'); c.innerHTML='';
+    if(tempPackages.length===0){ c.innerHTML='<p class="text-xs text-gray-500 italic text-center py-4">Sin paquetes.</p>'; return; }
+    tempPackages.forEach((pkg,idx)=>{
+        const row=document.createElement('div');
+        row.className='flex gap-2 items-center bg-black/40 border border-slate-800 rounded-xl p-2';
+        row.innerHTML=`
+            <input type="text" class="input-field flex-1 text-xs" value="${(pkg.name||'').replace(/"/g,'&quot;')}" onchange="updatePkg(${idx},'name',this.value)">
+            <input type="number" step="0.01" min="0" class="input-field w-28 text-xs font-mono" value="${pkg.price}" onchange="updatePkg(${idx},'price',parseFloat(this.value))">
+            <span class="text-[10px] text-gray-500">USDT</span>
+            <button onclick="removePkg(${idx})" class="w-8 h-8 rounded-lg bg-rose-500/10 text-rose-400 flex items-center justify-center shrink-0"><i data-lucide="trash-2" class="w-4 h-4"></i></button>`;
+        c.appendChild(row);
+    });
+    lucide.createIcons();
+}
+function addPackageRow(){ tempPackages.push({ id:'pkg-'+Date.now()+'-'+Math.random().toString(36).slice(2,6), name:'Nuevo paquete', price:1.00 }); renderPackagesEditor(); }
+function updatePkg(idx,f,v){ if(tempPackages[idx]) tempPackages[idx][f]=v; }
+function removePkg(idx){ tempPackages.splice(idx,1); renderPackagesEditor(); }
+async function saveGame(){
+    const title=document.getElementById('gm-title').value.trim();
+    const icon=document.getElementById('gm-icon').value.trim()||'🎮';
+    const logo=document.getElementById('gm-logo').value.trim();
+    const discount=Math.max(0,Math.min(99,parseInt(document.getElementById('gm-discount').value)||0));
+    const minId=parseInt(document.getElementById('gm-minId').value)||8;
+    const cover=document.getElementById('gm-cover').value.trim();
+    const desc=document.getElementById('gm-desc').value.trim();
+    const tagsRaw=document.getElementById('gm-tags').value.trim();
+    const tags=tagsRaw?tagsRaw.split(',').map(t=>t.trim()).filter(Boolean):[];
+    const idMode=document.getElementById('gm-idMode').value;
+    const idEnabled=document.getElementById('gm-idEnabled').checked;
+
+    if(!title){ toast('Nombre obligatorio','error'); return; }
+    if(!cover){ toast('Portada obligatoria','error'); return; }
+    if(tempPackages.length===0){ toast('Agrega paquetes','error'); return; }
+
+    let key=editingGameKey;
+    if(!key){ key=title.toLowerCase().replace(/[^a-z0-9]/g,'')||('game'+Date.now()); let base=key,i=1; while(config.games[key]){ key=base+i; i++; } }
+    const existingPaused = editingGameKey && config.games[editingGameKey] ? config.games[editingGameKey].paused : false;
+    const safePackages = tempPackages.map(p=>({
+        id: p.id || ('pkg-'+Date.now()+'-'+Math.random().toString(36).slice(2,6)),
+        name: String(p.name||'Sin nombre').trim()||'Sin nombre',
+        price: (isFinite(Number(p.price))&&Number(p.price)>0)?Number(p.price):0.01
+    }));
+    config.games[key]={ title, icon, minIdLength:minId, cover, description:desc, logo, tags, idMode:idEnabled?idMode:'no_id', idEnabled, paused: existingPaused||false, discount, packages:safePackages };
+    const btn=document.getElementById('saveGameBtn');
+    btn.disabled=true; btn.innerText='GUARDANDO...';
+    const ok=await saveConfig();
+    btn.disabled=false; btn.innerText='GUARDAR';
+    if(ok){ renderGamesAdmin(); closeGameModal(); toast('Guardado'); }
+}
+async function deleteGame(){
+    if(!editingGameKey) return;
+    if(!confirm(`¿Eliminar "${config.games[editingGameKey].title}"?`)) return;
+    delete config.games[editingGameKey];
+    if(await saveConfig()){ renderGamesAdmin(); closeGameModal(); toast('Eliminado'); }
+}
+
+// ============ PAGOS ============
+function renderPaymentsAdmin(){
+    const c=document.getElementById('paymentsAdminList'); c.innerHTML='';
+    if(config.paymentMethods.length===0){ c.innerHTML='<div class="glass-card p-8 rounded-2xl text-center text-gray-400">No hay métodos.</div>'; return; }
+    config.paymentMethods.forEach(pm=>{
+        const qrBadge = pm.qr ? '<span class="text-[10px] bg-emerald-500/15 text-emerald-400 px-2 py-0.5 rounded-full">QR ✓</span>' : '';
+        const card=document.createElement('div');
+        card.className='glass-card rounded-2xl p-4 flex items-center gap-4'+(!pm.enabled?' opacity-60':'');
+        card.innerHTML=`
+            <div class="w-12 h-12 rounded-xl bg-cyber-cyan/10 border border-cyber-cyan/30 flex items-center justify-center text-2xl shrink-0">${pm.icon}</div>
+            <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2 flex-wrap">
+                    <h3 class="font-orbitron font-bold text-white">${escapeHtml(pm.name)}</h3>
+                    <span class="text-[10px] font-mono text-gray-500 bg-slate-800 px-2 py-0.5 rounded">${escapeHtml(pm.code)}</span>
+                    ${!pm.enabled?'<span class="text-[10px] bg-slate-700 text-gray-300 px-2 py-0.5 rounded-full">Off</span>':''}
+                    ${qrBadge}
+                </div>
+                <p class="text-xs text-gray-400 mt-1">${(pm.fields||[]).length} campos · Tasa: 1 USDT = ${pm.rate} ${escapeHtml(pm.label)}</p>
+            </div>
+            <button onclick="openPaymentModal('${pm.id}')" class="px-3 py-2 rounded-lg bg-cyber-cyan/10 text-cyber-cyan border border-cyber-cyan/30 font-orbitron text-xs font-bold flex items-center gap-1.5">
+                <i data-lucide="pencil" class="w-3.5 h-3.5"></i> Editar
+            </button>`;
+        c.appendChild(card);
+    });
+    lucide.createIcons();
+}
+
+function openPaymentModal(id=null){
+    editingPaymentId=id;
+    const dbtn=document.getElementById('deletePaymentBtn');
+    if(id){
+        const pm=config.paymentMethods.find(p=>p.id===id); if(!pm)return;
+        document.getElementById('paymentModalTitle').innerText='Editar: '+pm.name;
+        document.getElementById('pm-name').value=pm.name;
+        document.getElementById('pm-icon').value=pm.icon;
+        document.getElementById('pm-code').value=pm.code;
+        document.getElementById('pm-label').value=pm.label;
+        document.getElementById('pm-symbol').value=pm.symbol;
+        document.getElementById('pm-decimals').value=pm.decimals;
+        document.getElementById('pm-rate').value=pm.rate||1;
+        document.getElementById('pm-enabled').checked=pm.enabled!==false;
+        document.getElementById('pm-askReference').checked=pm.askReference!==false;
+        document.getElementById('pm-askBank').checked=pm.askBank!==false;
+        document.getElementById('pm-askCapture').checked=pm.askCapture!==false;
+        // QR
+        document.getElementById('pm-qr-url').value = (pm.qr && !pm.qr.startsWith('data:')) ? pm.qr : '';
+        document.getElementById('pm-qr-file').value = '';
+        window.__tempQr = pm.qr || '';
+        updateQrPreview();
+        tempFields = JSON.parse(JSON.stringify(pm.fields||[]));
+        dbtn.classList.remove('hidden');
+    } else {
+        document.getElementById('paymentModalTitle').innerText='Nuevo Método';
+        document.getElementById('pm-name').value='';
+        document.getElementById('pm-icon').value='💵';
+        document.getElementById('pm-code').value='';
+        document.getElementById('pm-label').value='';
+        document.getElementById('pm-symbol').value='$';
+        document.getElementById('pm-decimals').value=2;
+        document.getElementById('pm-rate').value=1;
+        document.getElementById('pm-enabled').checked=true;
+        document.getElementById('pm-askReference').checked=true;
+        document.getElementById('pm-askBank').checked=true;
+        document.getElementById('pm-askCapture').checked=true;
+        document.getElementById('pm-qr-url').value='';
+        document.getElementById('pm-qr-file').value='';
+        window.__tempQr = '';
+        updateQrPreview();
+        tempFields=[];
+        dbtn.classList.add('hidden');
+    }
+    renderFieldsEditor();
+    document.getElementById('paymentModal').classList.remove('hidden');
+    document.body.style.overflow='hidden';
+    lucide.createIcons();
+}
+function closePaymentModal(){ document.getElementById('paymentModal').classList.add('hidden'); document.body.style.overflow=''; editingPaymentId=null; tempFields=[]; window.__tempQr=''; }
+
+function updateQrPreview(){
+    const url = (document.getElementById('pm-qr-url').value || '').trim();
+    const img = document.getElementById('pm-qr-preview');
+    const empty = document.getElementById('pm-qr-empty');
+    let src = '';
+    if (window.__tempQr && window.__tempQr.startsWith('data:')) src = window.__tempQr;
+    else if (url) src = url;
+    else if (window.__tempQr) src = window.__tempQr;
+
+    if (src){
+        img.src = src;
+        img.classList.remove('hidden');
+        empty.classList.add('hidden');
+    } else {
+        img.src = '';
+        img.classList.add('hidden');
+        empty.classList.remove('hidden');
+    }
+}
+function onQrFileSelected(ev){
+    const file = ev.target.files[0]; if (!file) return;
+    if (!file.type.startsWith('image/')){ toast('Solo imágenes','error'); return; }
+    if (file.size > 3*1024*1024){ toast('Imagen muy grande (máx 3MB)','error'); return; }
+    compressImage(file, 600, 0.8).then(dataUrl=>{
+        window.__tempQr = dataUrl;
+        document.getElementById('pm-qr-url').value = '';
+        updateQrPreview();
+        toast('QR cargado');
+    });
+}
+function removeQr(){
+    window.__tempQr = '';
+    document.getElementById('pm-qr-url').value = '';
+    document.getElementById('pm-qr-file').value = '';
+    updateQrPreview();
+    toast('QR eliminado');
+}
+function compressImage(file, maxDim, quality){
+    return new Promise(resolve=>{
+        const reader = new FileReader();
+        reader.onload = e=>{
+            const img = new Image();
+            img.onload = ()=>{
+                let w = img.width, h = img.height;
+                if (w>h && w>maxDim){ h = h*(maxDim/w); w = maxDim; }
+                else if (h>w && h>maxDim){ w = w*(maxDim/h); h = maxDim; }
+                const canvas = document.createElement('canvas');
+                canvas.width = w; canvas.height = h;
+                canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+                resolve(canvas.toDataURL('image/jpeg', quality));
+            };
+            img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    });
+}
+
+function renderFieldsEditor(){
+    const c=document.getElementById('fieldsContainer'); c.innerHTML='';
+    if(tempFields.length===0){ c.innerHTML='<p class="text-xs text-gray-500 italic text-center py-3">Sin campos (opcional)</p>'; return; }
+    tempFields.forEach((f,idx)=>{
+        const row=document.createElement('div');
+        row.className='flex gap-2 items-center bg-black/40 border border-slate-800 rounded-xl p-2';
+        row.innerHTML=`
+            <input type="text" class="input-field flex-1 text-xs" placeholder="Etiqueta" value="${(f.label||'').replace(/"/g,'&quot;')}" onchange="updateField(${idx},'label',this.value)">
+            <input type="text" class="input-field flex-1 text-xs font-mono" placeholder="Valor" value="${(f.value||'').replace(/"/g,'&quot;')}" onchange="updateField(${idx},'value',this.value)">
+            <button onclick="removeField(${idx})" class="w-8 h-8 rounded-lg bg-rose-500/10 text-rose-400 flex items-center justify-center shrink-0"><i data-lucide="trash-2" class="w-4 h-4"></i></button>`;
+        c.appendChild(row);
+    });
+    lucide.createIcons();
+}
+function addFieldRow(){ tempFields.push({label:'',value:''}); renderFieldsEditor(); }
+function updateField(i,f,v){ if(tempFields[i]) tempFields[i][f]=v; }
+function removeField(i){ tempFields.splice(i,1); renderFieldsEditor(); }
+
+async function savePayment(){
+    const name=document.getElementById('pm-name').value.trim();
+    const icon=document.getElementById('pm-icon').value.trim()||'💳';
+    const code=document.getElementById('pm-code').value.trim().toUpperCase();
+    const label=document.getElementById('pm-label').value.trim()||code;
+    const symbol=document.getElementById('pm-symbol').value.trim()||'$';
+    const decimals=parseInt(document.getElementById('pm-decimals').value)||0;
+    const rateVal=parseFloat(document.getElementById('pm-rate').value);
+    const enabled=document.getElementById('pm-enabled').checked;
+    const askReference=document.getElementById('pm-askReference').checked;
+    const askBank=document.getElementById('pm-askBank').checked;
+    const askCapture=document.getElementById('pm-askCapture').checked;
+    const qrUrl=(document.getElementById('pm-qr-url').value||'').trim();
+    let qr = window.__tempQr || '';
+    if (qrUrl){ qr = qrUrl; }
+    if(!name||!code){ toast('Nombre y código obligatorios','error'); return; }
+    if(isNaN(rateVal)||rateVal<=0){ toast('Tasa inválida','error'); return; }
+    const cleanFields = tempFields.filter(f=>f.label.trim()!=='');
+    if(editingPaymentId){
+        const pm=config.paymentMethods.find(p=>p.id===editingPaymentId);
+        if(pm){ Object.assign(pm,{ name,icon,code,label,symbol,decimals,enabled,rate:rateVal,fields:cleanFields,askReference,askBank,askCapture,qr }); }
+    } else {
+        config.paymentMethods.push({ id:'pm-'+Date.now(), name,icon,code,label,symbol,decimals,enabled,rate:rateVal,fields:cleanFields,askReference,askBank,askCapture,qr });
+    }
+    if(await saveConfig()){ renderPaymentsAdmin(); closePaymentModal(); toast('Guardado'); }
+}
+async function deletePayment(){
+    if(!editingPaymentId)return;
+    if(!confirm('¿Eliminar este método?'))return;
+    config.paymentMethods=config.paymentMethods.filter(p=>p.id!==editingPaymentId);
+    if(await saveConfig()){ renderPaymentsAdmin(); closePaymentModal(); toast('Eliminado'); }
+}
+
+// ============ HERO ============
+function renderHeroAdmin(){
+    const c=document.getElementById('heroAdminList'); if(!c)return; c.innerHTML='';
+    config.heroCards.forEach((card,idx)=>{
+        const prev = card.image ? `<img src="${card.image}" class="w-16 h-16 object-cover rounded-xl" onerror="this.outerHTML='<span class=\\'text-4xl\\'>${card.emoji}</span>'">` : `<span class="text-4xl">${card.emoji}</span>`;
+        const row=document.createElement('div');
+        row.className='glass-card rounded-2xl p-5 space-y-4';
+        row.innerHTML=`
+            <div class="flex items-center justify-between">
+                <h4 class="font-orbitron font-bold text-white">Tarjeta ${idx+1}</h4>
+                <div class="w-20 h-20 rounded-xl bg-gradient-to-br ${card.gradient} flex items-center justify-center overflow-hidden">${prev}</div>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+                <div><label class="block text-[10px] font-orbitron font-bold text-gray-300 uppercase mb-1">Emoji</label><input type="text" class="input-field text-sm" maxlength="4" value="${card.emoji}" onchange="updateHeroCard(${idx},'emoji',this.value)"></div>
+                <div><label class="block text-[10px] font-orbitron font-bold text-gray-300 uppercase mb-1">Margen px</label><input type="number" class="input-field font-mono text-sm" step="4" min="-40" max="40" value="${card.marginTop}" onchange="updateHeroCard(${idx},'marginTop',parseInt(this.value)||0)"></div>
+            </div>
+            <div><label class="block text-[10px] font-orbitron font-bold text-gray-300 uppercase mb-1">URL imagen</label><input type="url" class="input-field font-mono text-xs" value="${(card.image||'').replace(/"/g,'&quot;')}" onchange="updateHeroCard(${idx},'image',this.value)"></div>
+            <div><label class="block text-[10px] font-orbitron font-bold text-gray-300 uppercase mb-1">Gradiente</label>
+                <select class="input-field text-sm" onchange="updateHeroCard(${idx},'gradient',this.value)">
+                    ${GRADIENT_OPTIONS.map(o=>`<option value="${o.value}" ${o.value===card.gradient?'selected':''}>${o.label}</option>`).join('')}
+                </select>
+            </div>`;
+        c.appendChild(row);
+    });
+    lucide.createIcons();
+}
+function updateHeroCard(i,f,v){ if(!config.heroCards[i])return; config.heroCards[i][f]=v; renderHeroAdmin(); }
+async function saveHero(){ const b=document.getElementById('saveHeroBtn'); b.disabled=true; const o=b.innerHTML; b.innerHTML='GUARDANDO...'; const ok=await saveConfig(); b.disabled=false; b.innerHTML=o; lucide.createIcons(); if(ok) toast('Hero actualizado'); }
+
+// ============ MANTENIMIENTO ============
+async function toggleMaintenance(){
+    const a=!config.maintenance;
+    if(!confirm(a?'¿Activar mantenimiento?':'¿Desactivar?'))return;
+    config.maintenance=a;
+    if(await saveConfig()){ updateMaintenanceBtn(); toast(a?'ON':'Off'); }
+}
+function updateMaintenanceBtn(){
+    const b=document.getElementById('maintenanceBtn');
+    const t=document.getElementById('maintenanceBtnText');
+    if(config.maintenance){ b.className='px-3 py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-xs font-orbitron text-black border border-amber-500 flex items-center gap-1.5'; t.innerText='ON'; }
+    else { b.className='px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-orbitron text-white border border-slate-700 flex items-center gap-1.5'; t.innerText='Mantenimiento'; }
+}
+
+// ============ BACKUP ============
+function exportConfig(){
+    const blob=new Blob([JSON.stringify(config,null,2)],{type:'application/json'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a'); a.href=url; a.download=`xstore-backup-${new Date().toISOString().slice(0,10)}.json`; a.click();
+    URL.revokeObjectURL(url); toast('Descargado');
+}
+async function importConfig(){
+    const f=document.getElementById('importFile').files[0]; if(!f){ toast('Selecciona archivo','error'); return; }
+    const r=new FileReader();
+    r.onload=async(e)=>{
+        try {
+            const p=JSON.parse(e.target.result);
+            if(!p.games) throw new Error('Formato inválido');
+            if(!confirm('¿Reemplazar?'))return;
+            config=p; normalizeConfig();
+            if(await saveConfig()){ renderGamesAdmin(); renderPaymentsAdmin(); renderHeroAdmin(); updateMaintenanceBtn(); document.getElementById('importFile').value=''; toast('Importado'); }
+        } catch(err){ toast('Inválido: '+err.message,'error'); }
+    };
+    r.readAsText(f);
+}
+async function factoryReset(){
+    if(!confirm('⚠️ ¿Borrar TODOS los cambios?'))return;
+    if(!confirm('¿Estás seguro?'))return;
+    config=JSON.parse(JSON.stringify(DEFAULT_CONFIG));
+    if(await saveConfig()){ renderGamesAdmin(); renderPaymentsAdmin(); renderHeroAdmin(); updateMaintenanceBtn(); toast('Restaurado'); }
+}
+
+let toastTimer;
+function toast(msg,type='success'){
+    const t=document.getElementById('toast');
+    document.getElementById('toastText').innerText=msg;
+    const i=t.querySelector('i');
+    i.setAttribute('data-lucide', type==='error'?'alert-circle':'check-circle');
+    i.className = type==='error'?'w-5 h-5 text-rose-400':'w-5 h-5 text-emerald-400';
+    t.classList.remove('hidden'); lucide.createIcons();
+    clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.add('hidden'),3000);
+}
+
+document.addEventListener('keydown', e=>{
+    if(e.key==='Escape'){
+        if(!document.getElementById('gameModal').classList.contains('hidden')) closeGameModal();
+        if(!document.getElementById('paymentModal').classList.contains('hidden')) closePaymentModal();
+    }
+});
+</script>
+</body>
+</html>

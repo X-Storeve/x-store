@@ -1,0 +1,1265 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>X-Store | Recargas de Juegos y Monedas Virtuales</title>
+<meta name="description" content="Recarga diamantes, Robux, Gold y monedas virtuales al instante.">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<link rel="icon" href="logo.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Orbitron:wght@600;700;800;900&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@latest"></script>
+<script>
+tailwind.config = {
+    darkMode:'class',
+    theme:{ extend:{
+        colors:{ cyber:{ bg:'#09090e', card:'#12121e', cyan:'#00f2ff', magenta:'#e000ff', purple:'#8b00ff' } },
+        fontFamily:{ orbitron:['Orbitron','sans-serif'], sans:['Inter','sans-serif'] },
+        boxShadow:{ 'neon-cyan':'0 0 15px rgba(0,242,255,0.4)', 'neon-cyan-lg':'0 0 25px rgba(0,242,255,0.6)' }
+    }}
+};
+</script>
+<style>
+body { background:#09090e; color:#f8fafc;
+    background-image: radial-gradient(circle at 15% 15%, rgba(0,242,255,0.05) 0%, transparent 40%),
+                      radial-gradient(circle at 85% 85%, rgba(224,0,255,0.05) 0%, transparent 40%);
+    background-attachment: fixed; }
+body.modal-open { overflow: hidden; }
+.glass-card { background:rgba(18,18,30,0.75); backdrop-filter:blur(12px); border:1px solid rgba(255,255,255,0.08); }
+.glass-card-hover { transition: all .3s cubic-bezier(.4,0,.2,1); }
+.glass-card-hover:hover { border-color: rgba(0,242,255,.5); box-shadow: 0 0 20px rgba(0,242,255,.25); transform: translateY(-4px); }
+::-webkit-scrollbar { width:8px; } ::-webkit-scrollbar-thumb { background:#1e1e2e; border-radius:4px; }
+.skeleton { background:linear-gradient(90deg,rgba(30,30,46,.5) 25%,rgba(50,50,70,.5) 50%,rgba(30,30,46,.5) 75%); background-size:200% 100%; animation: shimmer 1.5s infinite; }
+@keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+.badge-discount { position:absolute; top:12px; left:12px; z-index:10;
+    background:linear-gradient(135deg,#ff0080,#e000ff); color:white;
+    font-family:'Orbitron',sans-serif; font-weight:900; padding:6px 12px; border-radius:999px; font-size:13px;
+    box-shadow:0 4px 15px rgba(224,0,255,.5); animation:pulse-discount 2s ease-in-out infinite; }
+@keyframes pulse-discount { 0%,100%{transform:scale(1)} 50%{transform:scale(1.08)} }
+.tag-pill { display:inline-block; font-size:10px; font-weight:700; padding:3px 9px; border-radius:999px; background:rgba(0,242,255,.1); color:#00f2ff; border:1px solid rgba(0,242,255,.3); }
+.paused-overlay { position:absolute; inset:0; z-index:5; background:rgba(9,9,14,.75); display:flex; align-items:center; justify-content:center; flex-direction:column; gap:6px; backdrop-filter:blur(2px); }
+.pkg-btn.selected { border-color:#00f2ff !important; background:rgba(0,242,255,.12) !important; box-shadow:0 0 15px rgba(0,242,255,.3); }
+.pkg-check { position:absolute; top:6px; right:6px; width:18px; height:18px; border-radius:50%; border:2px solid #475569; display:flex; align-items:center; justify-content:center; transition:all .2s; }
+.pkg-btn.selected .pkg-check { background:#00f2ff; border-color:#00f2ff; }
+.pkg-btn.selected .pkg-check::after { content:'✓'; color:#09090e; font-weight:900; font-size:12px; }
+.pay-btn.selected { border-color:#00f2ff !important; background:rgba(0,242,255,.1) !important; }
+.qty-btn { width:26px; height:26px; border-radius:8px; background:rgba(0,242,255,.1); border:1px solid rgba(0,242,255,.3); color:#00f2ff; font-weight:900; display:flex; align-items:center; justify-content:center; font-size:14px; }
+.qty-btn:active { background:#00f2ff; color:#000; }
+.qty-num { min-width:24px; text-align:center; font-family:'Orbitron',sans-serif; font-weight:900; color:#00f2ff; }
+.copy-btn { background:rgba(0,242,255,.08); border:1px solid rgba(0,242,255,.25); color:#00f2ff; border-radius:8px; padding:3px 8px; font-size:10px; font-weight:700; }
+.copy-btn:active { background:#00f2ff; color:#000; }
+select.input-field { appearance:none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 1rem center; padding-right: 2.5rem; }
+
+/* STEPPER */
+.step-dot { width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-family:'Orbitron',sans-serif; font-weight:900; font-size:13px; transition:all .3s; border:2px solid #334155; color:#64748b; background:#0f0f1a; }
+.step-dot.active { background:#00f2ff; color:#000; border-color:#00f2ff; box-shadow:0 0 15px rgba(0,242,255,.5); }
+.step-dot.done { background:rgba(0,242,255,.15); color:#00f2ff; border-color:#00f2ff; }
+.step-line { flex:1; height:2px; background:#1e293b; }
+.step-line.done { background:#00f2ff; }
+.step-panel { display:none; }
+.step-panel.active { display:block; animation: fade-in .25s ease-out; }
+@keyframes fade-in { from{opacity:0; transform:translateY(8px)} to{opacity:1; transform:translateY(0)} }
+
+/* Bloque de total en vivo */
+.live-total-box { background:linear-gradient(135deg, rgba(0,242,255,.08), rgba(224,0,255,.08)); border:1px solid rgba(0,242,255,.3); border-radius:16px; padding:14px 16px; }
+</style>
+</head>
+<body class="font-sans antialiased min-h-screen flex flex-col justify-between">
+
+<!-- MANTENIMIENTO -->
+<div id="maintenanceScreen" class="hidden fixed inset-0 z-[200] bg-[#09090e] flex items-center justify-center p-6">
+    <div class="text-center max-w-lg">
+        <div class="text-8xl mb-6">🚧</div>
+        <h1 class="font-orbitron text-4xl font-black text-white mb-3">PÁGINA EN MANTENIMIENTO</h1>
+        <p class="text-cyber-cyan text-sm mb-2 font-orbitron">Disculpa las molestias</p>
+        <p class="text-gray-400 text-sm mb-6">Vuelve más tarde. Estamos mejorando tu experiencia.</p>
+        <div class="flex items-center justify-center gap-3 text-4xl"><span>⚙️</span><span>🔧</span><span>⚙️</span></div>
+    </div>
+</div>
+
+<!-- LOGIN DE TELÉFONO -->
+<div id="phoneLoginScreen" class="hidden fixed inset-0 z-[150] bg-[#09090e]/95 backdrop-blur-md flex items-center justify-center p-4">
+    <div class="glass-card w-full max-w-md rounded-3xl p-8 border border-cyber-cyan/40 shadow-2xl">
+        <div class="text-center mb-6">
+            <div class="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-cyber-cyan/20 to-cyber-magenta/20 border border-cyber-cyan/40 flex items-center justify-center mb-4">
+                <i data-lucide="smartphone" class="w-8 h-8 text-cyber-cyan"></i>
+            </div>
+            <h1 class="font-orbitron text-2xl font-black text-white">BIENVENIDO</h1>
+            <p class="text-xs text-gray-400 mt-1">Ingresa tu número para continuar</p>
+        </div>
+        <div class="space-y-4">
+            <div>
+                <label class="block text-xs font-orbitron font-bold text-gray-300 uppercase mb-2">Teléfono</label>
+                <input type="tel" id="loginPhone" class="w-full bg-black/50 border border-slate-700 rounded-xl px-4 py-3 text-white font-mono focus:border-cyber-cyan focus:outline-none" placeholder="04141234567" inputmode="tel" autocomplete="off">
+                <p id="phoneStatus" class="text-[11px] mt-1.5 hidden"></p>
+            </div>
+            <button id="phoneLoginBtn" onclick="doPhoneLogin()" disabled class="w-full py-3.5 rounded-xl font-orbitron font-bold text-black bg-gradient-to-r from-cyber-cyan to-blue-400 hover:brightness-110 disabled:opacity-50 flex items-center justify-center gap-2">
+                <i data-lucide="log-in" class="w-5 h-5"></i><span>CONTINUAR</span>
+            </button>
+            <p class="text-[11px] text-gray-500 text-center">Tu número quedará guardado en este dispositivo.</p>
+        </div>
+    </div>
+</div>
+
+<!-- NO REGISTRADO -->
+<div id="notRegisteredScreen" class="hidden fixed inset-0 z-[150] bg-[#09090e]/95 backdrop-blur-md flex items-center justify-center p-4">
+    <div class="glass-card w-full max-w-md rounded-3xl p-8 border border-amber-500/40 shadow-2xl text-center">
+        <div class="text-6xl mb-4">🔒</div>
+        <h2 class="font-orbitron text-xl font-black text-white mb-2">NÚMERO NO REGISTRADO</h2>
+        <p class="text-sm text-gray-300 mb-6">Para realizar recargas, primero solicita tu registro al soporte.</p>
+        <div class="space-y-3">
+            <a id="waRequestLink" href="#" target="_blank" class="w-full py-3.5 rounded-xl font-orbitron font-bold text-black bg-gradient-to-r from-emerald-400 to-emerald-500 hover:brightness-110 flex items-center justify-center gap-2">
+                <i data-lucide="message-square" class="w-5 h-5"></i> SOLICITAR REGISTRO
+            </a>
+            <button onclick="resetLogin()" class="w-full py-2.5 rounded-xl font-orbitron font-bold text-gray-300 bg-slate-800 border border-slate-700 text-xs">Cambiar número</button>
+        </div>
+    </div>
+</div>
+
+<!-- HEADER -->
+<header class="sticky top-0 z-40 bg-[#09090e]/90 backdrop-blur-md border-b border-cyan-500/20">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between gap-4">
+        <a href="#" class="flex items-center gap-3 group">
+            <div class="relative w-12 h-12 flex items-center justify-center rounded-full bg-black/60 border border-cyber-cyan/40 p-1 shadow-neon-cyan overflow-hidden">
+                <img src="icons/icon-192.png" alt="X-Store" class="w-full h-full object-cover rounded-full">
+            </div>
+            <div class="flex flex-col">
+                <span class="font-orbitron text-2xl font-black tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-cyber-cyan to-cyber-magenta">X-STORE</span>
+                <span class="text-[10px] text-cyber-cyan tracking-widest uppercase -mt-1 font-semibold">Virtual Gaming Currency</span>
+            </div>
+        </a>
+        <div class="hidden md:flex flex-1 max-w-md mx-8 relative">
+            <input type="text" id="searchInput" oninput="filterGames(this.value)" placeholder="Buscar juego..." class="w-full bg-cyber-card/80 border border-slate-700/60 rounded-xl py-2.5 pl-10 pr-10 text-sm text-white placeholder-gray-400 focus:outline-none focus:border-cyber-cyan">
+            <i data-lucide="search" class="w-4 h-4 text-gray-400 absolute left-3.5 top-3.5"></i>
+        </div>
+        <div class="flex items-center gap-3">
+            <div id="clientBadge" class="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30">
+                <i data-lucide="user-check" class="w-4 h-4 text-emerald-400"></i>
+                <div class="flex flex-col leading-tight">
+                    <span id="clientNameBadge" class="text-[11px] font-bold text-emerald-300">—</span>
+                    <button onclick="logoutClient()" class="text-[9px] text-gray-400 hover:text-rose-400 text-left">Cerrar sesión</button>
+                </div>
+            </div>
+            <a href="https://wa.me/584165570405?text=Hola%20X-Store" target="_blank" class="flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20 px-3 sm:px-4 py-2 rounded-xl text-sm font-semibold">
+                <i data-lucide="message-square" class="w-4 h-4"></i>
+                <span class="hidden sm:inline">Soporte</span>
+            </a>
+        </div>
+    </div>
+    <div class="md:hidden px-4 pb-3">
+        <div class="relative">
+            <input type="text" id="searchInputMobile" oninput="filterGames(this.value)" placeholder="Buscar juego..." class="w-full bg-cyber-card border border-slate-700/60 rounded-xl py-2 pl-9 pr-9 text-sm text-white">
+            <i data-lucide="search" class="w-4 h-4 text-gray-400 absolute left-3 top-2.5"></i>
+        </div>
+    </div>
+</header>
+
+<main class="flex-grow">
+    <section class="relative overflow-hidden pt-8 pb-12 md:pt-12 md:pb-16 px-4 sm:px-6 lg:px-8">
+        <div class="max-w-7xl mx-auto">
+            <div class="glass-card rounded-3xl p-6 sm:p-10 border border-cyber-cyan/30 bg-gradient-to-br from-cyber-card via-[#151528] to-[#1a0a2a] relative overflow-hidden shadow-2xl">
+                <div class="absolute -top-24 -right-24 w-80 h-80 bg-cyber-magenta/20 rounded-full blur-3xl"></div>
+                <div class="absolute -bottom-24 -left-24 w-80 h-80 bg-cyber-cyan/20 rounded-full blur-3xl"></div>
+                <div class="relative z-10 grid md:grid-cols-2 gap-8 items-center">
+                    <div class="space-y-6 text-center md:text-left">
+                        <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-cyber-cyan/10 border border-cyber-cyan/30 text-cyber-cyan text-xs font-semibold uppercase">
+                            <span class="w-2 h-2 rounded-full bg-cyber-cyan animate-pulse"></span>
+                            Recargas 100% Automáticas
+                        </div>
+                        <h1 class="font-orbitron text-3xl sm:text-5xl font-extrabold text-white leading-tight">
+                            TUS DIAMANTES Y MONEDAS <span class="text-transparent bg-clip-text bg-gradient-to-r from-cyber-cyan via-purple-400 to-cyber-magenta">AL INSTANTE</span>
+                        </h1>
+                        <p class="text-gray-300 text-sm sm:text-base max-w-xl">Free Fire, Mobile Legends, Roblox y más.</p>
+                        <a href="#catalogo" class="inline-flex px-8 py-3.5 rounded-xl font-orbitron font-bold text-black bg-gradient-to-r from-cyber-cyan to-blue-400 hover:brightness-110 shadow-neon-cyan items-center gap-2">
+                            <span>RECARGAR AHORA</span><i data-lucide="zap" class="w-5 h-5 fill-black"></i>
+                        </a>
+                    </div>
+                    <div class="relative flex justify-center items-center">
+                        <div class="grid grid-cols-2 gap-3 max-w-sm w-full transform rotate-1 hover:rotate-0 transition-transform" id="heroCardsGrid"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="catalogo" class="py-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+        <div class="flex flex-col md:flex-row md:items-end justify-between mb-10 gap-4">
+            <div>
+                <span class="text-cyber-cyan text-xs font-bold tracking-widest uppercase font-orbitron">Catálogo Disponible</span>
+                <h2 class="font-orbitron text-3xl font-black text-white mt-1">SELECCIONA TU JUEGO</h2>
+            </div>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6" id="gamesGrid">
+            <div class="game-card-skeleton glass-card rounded-2xl overflow-hidden"><div class="h-48 skeleton"></div></div>
+            <div class="game-card-skeleton glass-card rounded-2xl overflow-hidden"><div class="h-48 skeleton"></div></div>
+            <div class="game-card-skeleton glass-card rounded-2xl overflow-hidden"><div class="h-48 skeleton"></div></div>
+            <div class="game-card-skeleton glass-card rounded-2xl overflow-hidden"><div class="h-48 skeleton"></div></div>
+        </div>
+    </section>
+
+    <section id="metodos-pago" class="py-16 px-4 sm:px-6 lg:px-8 bg-[#0b0b14] border-t border-slate-800">
+        <div class="max-w-7xl mx-auto">
+            <div class="text-center max-w-2xl mx-auto mb-12">
+                <span class="text-cyber-magenta text-xs font-bold tracking-widest uppercase font-orbitron">Facilidad y Rapidez</span>
+                <h2 class="font-orbitron text-3xl font-black text-white mt-1">MÉTODOS DE PAGO</h2>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6" id="paymentMethodsGrid"></div>
+        </div>
+    </section>
+</main>
+
+<!-- MODAL RECARGA (2 PASOS) -->
+<div id="rechargeModal" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
+<div class="glass-card w-full max-w-2xl rounded-3xl border border-cyber-cyan/40 overflow-hidden my-8">
+    <div class="p-4 sm:p-5 border-b border-slate-800/80 flex items-center justify-between bg-gradient-to-r from-cyber-card to-slate-900">
+        <div class="flex items-center gap-3 min-w-0">
+            <div id="modalGameIcon" class="w-10 h-10 rounded-xl bg-cyber-cyan/10 flex items-center justify-center text-cyber-cyan font-bold text-xl shrink-0">💎</div>
+            <div class="min-w-0">
+                <h3 id="modalGameTitle" class="font-orbitron font-bold text-base sm:text-lg text-white truncate">Recargar</h3>
+                <p id="modalGameDiscount" class="text-[11px] text-rose-400 font-bold hidden"></p>
+            </div>
+        </div>
+        <button onclick="closeRechargeModal()" class="w-8 h-8 rounded-full bg-slate-800 text-gray-400 flex items-center justify-center shrink-0"><i data-lucide="x" class="w-5 h-5"></i></button>
+    </div>
+
+    <!-- STEPPER (2 pasos) -->
+    <div id="stepStepper" class="px-4 sm:px-6 py-4 border-b border-slate-800/80 bg-black/20">
+        <div class="flex items-center gap-2">
+            <div class="step-dot active" id="stepDot1">1</div>
+            <div class="step-line" id="stepLine1"></div>
+            <div class="step-dot" id="stepDot2">2</div>
+        </div>
+        <div class="flex justify-between mt-1.5 text-[10px] font-orbitron font-bold text-gray-500 uppercase">
+            <span id="stepLabel1">Selección</span>
+            <span id="stepLabel2">Pago</span>
+        </div>
+    </div>
+
+    <div class="p-5 sm:p-6 max-h-[70vh] overflow-y-auto">
+        <div id="pausedNotice" class="hidden p-4 rounded-xl bg-amber-500/10 border border-amber-500/40 text-center">
+            <div class="text-4xl mb-2">⏸</div>
+            <p class="font-orbitron font-bold text-amber-400">Temporalmente Inhabilitado</p>
+        </div>
+
+        <div id="stepContentWrap">
+            <!-- ===================== PASO 1: TODO UNIFICADO ===================== -->
+            <div id="stepPanel1" class="step-panel active space-y-6">
+
+                <!-- BLOQUE 1: ID -->
+                <div class="space-y-3">
+                    <h4 class="font-orbitron text-sm font-bold text-cyber-cyan uppercase flex items-center gap-2">
+                        <span class="w-6 h-6 rounded-full bg-cyber-cyan/20 border border-cyber-cyan/40 flex items-center justify-center text-xs">1</span>
+                        Identificación
+                    </h4>
+
+                    <div id="idSimpleWrap">
+                        <input type="text" id="playerIdInput" oninput="validateIdInput()" placeholder="Ej: 123456789" class="w-full bg-black/50 border border-slate-700 rounded-xl px-4 py-3 text-sm text-white focus:border-cyber-cyan font-mono">
+                    </div>
+                    <div id="idServerWrap" class="hidden grid grid-cols-2 gap-2">
+                        <input type="text" id="playerIdInput2" oninput="validateIdInput()" placeholder="ID" class="w-full bg-black/50 border border-slate-700 rounded-xl px-4 py-3 text-sm text-white font-mono">
+                        <input type="text" id="serverIdInput" oninput="validateIdInput()" placeholder="Server" class="w-full bg-black/50 border border-slate-700 rounded-xl px-4 py-3 text-sm text-white font-mono">
+                    </div>
+                    <div id="noIdWrap" class="hidden">
+                        <div class="flex items-center gap-3 p-3 rounded-xl bg-amber-500/10 border border-amber-500/30">
+                            <i data-lucide="info" class="w-5 h-5 text-amber-400 shrink-0"></i>
+                            <p class="text-[11px] text-amber-200">Este juego <strong>no requiere ID</strong>.</p>
+                        </div>
+                    </div>
+                    <p class="text-[10px] text-gray-400" id="idHelperText">Copia correctamente tu ID.</p>
+                </div>
+
+                <div class="border-t border-slate-800"></div>
+
+                <!-- BLOQUE 2: MÉTODO DE PAGO -->
+                <div class="space-y-3">
+                    <h4 class="font-orbitron text-sm font-bold text-cyber-cyan uppercase flex items-center gap-2">
+                        <span class="w-6 h-6 rounded-full bg-cyber-cyan/20 border border-cyber-cyan/40 flex items-center justify-center text-xs">2</span>
+                        Método de pago
+                    </h4>
+                    <div class="grid grid-cols-2 sm:grid-cols-3 gap-3" id="paymentMethodsModal"></div>
+                    <p id="payMethodHint" class="text-[10px] text-amber-400 flex items-center gap-1 hidden">
+                        <i data-lucide="info" class="w-3 h-3"></i> Selecciona un método.
+                    </p>
+                </div>
+
+                <div class="border-t border-slate-800"></div>
+
+                <!-- BLOQUE 3: PAQUETES -->
+                <div class="space-y-3">
+                    <div class="flex items-center justify-between gap-2">
+                        <h4 class="font-orbitron text-sm font-bold text-cyber-cyan uppercase flex items-center gap-2">
+                            <span class="w-6 h-6 rounded-full bg-cyber-cyan/20 border border-cyber-cyan/40 flex items-center justify-center text-xs">3</span>
+                            Paquetes
+                        </h4>
+                        <span id="pkgCounter" class="text-[10px] text-cyber-cyan bg-cyber-cyan/10 px-2 py-1 rounded-full hidden whitespace-nowrap">0</span>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3" id="packageGrid"></div>
+                    <p id="packageHint" class="text-[10px] text-amber-400 flex items-center gap-1 hidden">
+                        <i data-lucide="info" class="w-3 h-3"></i> Selecciona un método primero para ver los precios.
+                    </p>
+                </div>
+
+                <!-- TOTAL EN VIVO -->
+                <div class="live-total-box space-y-2">
+                    <div class="flex justify-between text-xs text-gray-300">
+                        <span>Paquetes:</span>
+                        <span id="livePkgSummary" class="text-white text-right">—</span>
+                    </div>
+                    <div class="flex justify-between items-center pt-2 border-t border-cyan-500/20">
+                        <span class="font-orbitron text-sm font-black text-white">TOTAL:</span>
+                        <span id="liveTotal" class="font-orbitron text-2xl font-black text-cyber-cyan">—</span>
+                    </div>
+                    <p id="liveTotalHint" class="text-[10px] text-gray-500 text-center">Selecciona paquetes para ver el total</p>
+                </div>
+            </div>
+
+            <!-- ===================== PASO 2: DATOS DE PAGO ===================== -->
+            <div id="stepPanel2" class="step-panel space-y-4">
+                <div>
+                    <h4 class="font-orbitron text-base font-bold text-white mb-1">Datos de tu pago</h4>
+                    <p class="text-xs text-gray-400">Realiza el pago y completa el formulario.</p>
+                </div>
+
+                <!-- QR + Datos de cobro -->
+                <div class="p-4 rounded-2xl bg-black/60 border border-cyber-cyan/30 space-y-4">
+                    <div class="flex items-center justify-between">
+                        <span class="font-orbitron text-xs font-bold text-cyber-cyan uppercase">Datos para el pago</span>
+                        <span class="text-[10px] text-gray-500">Toca para copiar</span>
+                    </div>
+
+                    <div id="qrBox" class="hidden text-center">
+                        <img id="qrImage" class="max-h-56 mx-auto rounded-xl border border-cyber-cyan/40 bg-white p-2">
+                        <p class="text-[10px] text-gray-500 mt-1">Escanea el QR para pagar</p>
+                    </div>
+
+                    <div id="paymentFieldsList" class="space-y-1.5"></div>
+                </div>
+
+                <!-- Referencia -->
+                <div id="refWrap">
+                    <label class="block text-[10px] font-orbitron font-bold text-gray-300 uppercase mb-1">Últimos 6 dígitos de referencia <span class="text-rose-400">*</span></label>
+                    <input type="text" id="refInput" oninput="validatePaymentData()" maxlength="6" placeholder="123456" class="w-full bg-black/50 border border-slate-700 rounded-xl px-4 py-3 text-white font-mono focus:border-cyber-cyan" inputmode="numeric">
+                </div>
+
+                <!-- Banco emisor (select) -->
+                <div id="bankWrap">
+                    <label class="block text-[10px] font-orbitron font-bold text-gray-300 uppercase mb-1">Banco emisor <span class="text-rose-400">*</span></label>
+                    <select id="bankInput" onchange="validatePaymentData()" class="w-full bg-black/50 border border-slate-700 rounded-xl px-4 py-3 text-white focus:border-cyber-cyan">
+                        <option value="">— Selecciona tu banco —</option>
+                    </select>
+                </div>
+
+                <!-- Captura -->
+                <div id="captureWrap">
+                    <label class="block text-[10px] font-orbitron font-bold text-gray-300 uppercase mb-1">Captura del pago <span class="text-rose-400">*</span></label>
+                    <input type="file" id="captureInput" accept="image/*" onchange="onCaptureSelected(event)" class="w-full bg-black/50 border border-slate-700 rounded-xl px-4 py-3 text-white text-xs">
+                    <div id="capturePreview" class="hidden mt-2 relative">
+                        <img id="captureImg" class="rounded-xl max-h-48 mx-auto border border-cyber-cyan/30">
+                        <button onclick="removeCapture()" class="absolute top-2 right-2 w-7 h-7 rounded-full bg-rose-500 text-white flex items-center justify-center"><i data-lucide="x" class="w-4 h-4"></i></button>
+                    </div>
+                    <p id="captureStatus" class="text-[10px] text-gray-500 mt-1">JPG/PNG · máx 5MB · se comprime automáticamente</p>
+                </div>
+
+                <!-- Resumen final -->
+                <div class="p-4 rounded-2xl bg-black/60 border border-slate-800 space-y-2">
+                    <div class="flex justify-between text-xs text-gray-400"><span>Juego:</span><span id="summaryGame" class="text-white">-</span></div>
+                    <div class="flex justify-between text-xs text-gray-400"><span>ID:</span><span id="summaryId" class="text-cyber-cyan font-mono">-</span></div>
+                    <div id="summaryPackagesWrap" class="space-y-1 py-1 border-t border-slate-800/60">
+                        <div class="flex justify-between text-xs text-gray-400"><span>Paquetes:</span><span id="summaryPackage" class="text-white">-</span></div>
+                        <div id="summaryPackagesList" class="text-[10px] text-gray-500 pl-2"></div>
+                    </div>
+                    <div class="flex justify-between text-xs text-gray-400"><span>Pago:</span><span id="summaryPayment" class="text-white">-</span></div>
+                    <div class="pt-2 border-t border-slate-800 flex justify-between items-center">
+                        <span class="font-orbitron text-xs font-bold text-white">TOTAL:</span>
+                        <span id="summaryTotal" class="font-orbitron text-xl font-extrabold text-cyber-cyan">-</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- FOOTER NAVEGACIÓN -->
+    <div class="p-4 sm:p-5 border-t border-slate-800/80 bg-[#0c0c16] flex gap-2">
+        <button id="backBtn" onclick="prevStep()" class="hidden px-4 py-3 rounded-xl font-orbitron font-bold text-white bg-slate-800 border border-slate-700 flex items-center gap-2 text-sm">
+            <i data-lucide="arrow-left" class="w-4 h-4"></i> Atrás
+        </button>
+        <button id="nextBtn" onclick="nextStep()" class="flex-1 py-3.5 rounded-xl font-orbitron font-extrabold text-black bg-gradient-to-r from-cyber-cyan to-blue-400 hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+            <span id="nextBtnText">CONTINUAR CON EL PAGO</span>
+            <i data-lucide="arrow-right" class="w-5 h-5" id="nextBtnIcon"></i>
+        </button>
+        <button id="sendOrderBtn" onclick="submitOrder()" class="hidden flex-1 py-3.5 rounded-xl font-orbitron font-extrabold text-black bg-gradient-to-r from-emerald-400 to-emerald-500 hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+            <i data-lucide="check-circle" class="w-5 h-5"></i>
+            <span>LISTO, PROCEDER A WHATSAPP</span>
+        </button>
+    </div>
+</div>
+</div>
+
+<!-- MODAL ÉXITO -->
+<div id="successModal" class="fixed inset-0 z-[90] hidden bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+    <div class="glass-card w-full max-w-md rounded-3xl border border-emerald-500/40 p-8 text-center">
+        <div class="text-6xl mb-4">✅</div>
+        <h3 class="font-orbitron text-2xl font-black text-white mb-2">¡PEDIDO ENVIADO!</h3>
+        <p class="text-sm text-gray-300 mb-6">Tu pedido fue registrado. Envía el comprobante por WhatsApp.</p>
+        <a id="waSuccessLink" href="#" target="_blank" class="w-full py-3.5 rounded-xl font-orbitron font-bold text-black bg-gradient-to-r from-emerald-400 to-emerald-500 hover:brightness-110 flex items-center justify-center gap-2">
+            <i data-lucide="message-square" class="w-5 h-5"></i> ABRIR WHATSAPP
+        </a>
+        <button onclick="closeSuccessModal()" class="mt-3 w-full py-2 text-xs text-gray-400">Cerrar</button>
+    </div>
+</div>
+
+<!-- FOOTER -->
+<footer class="bg-[#06060a] border-t border-slate-900 py-10 px-4 text-gray-500 text-xs">
+    <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
+        <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded-full overflow-hidden"><img src="logo.png" alt="X" class="w-full h-full object-cover"></div>
+            <div><span class="font-orbitron font-bold text-sm text-white">X-STORE</span><p>© 2026 X-Store.</p></div>
+        </div>
+        <div class="flex items-center gap-6">
+            <a href="https://wa.me/584165570405" target="_blank" class="hover:text-cyber-cyan">Soporte</a>
+        </div>
+    </div>
+</footer>
+
+<script>
+const API_CONFIG = 'api/config';
+const API_CLIENTS = 'api/clients';
+const API_ORDERS = 'api/orders';
+const API_LISTS = 'api/lists';
+const WHATSAPP_NUMBER = '584165570405';
+const CLIENT_KEY = 'xstore_client_v1';
+
+let paymentMethods = [];
+let gameData = {};
+let maintenanceMode = false;
+let config_heroCards = [];
+let client = null;
+let bancosList = [];
+
+let currentOrder = {
+    gameKey:null, playerId:'', serverId:'',
+    packages:[], paymentMethod:'', reference:'', bank:'', capture:null
+};
+let currentStep = 1;
+const TOTAL_STEPS = 2;
+
+const FALLBACK_CONFIG = {
+    paymentMethods: [
+        { id:'pm-1', name:'Pago Móvil', code:'VES', label:'Bs.', symbol:'Bs.', decimals:2, icon:'🇻🇪', enabled:true, rate:40,
+          fields:[{label:'Banco',value:'Mercantil'},{label:'Teléfono',value:'0414-1234567'},{label:'Cédula',value:'V-12345678'}],
+          askReference:true, askBank:true, askCapture:true, qr:'' },
+        { id:'pm-2', name:'Binance Pay', code:'USDT', label:'USDT', symbol:'USDT', decimals:2, icon:'🟡', enabled:true, rate:1,
+          fields:[{label:'Pay ID',value:''}], askReference:true, askBank:false, askCapture:true, qr:'' }
+    ],
+    maintenance:false,
+    heroCards:[
+        { id:'card-1',image:'',emoji:'💎',gradient:'from-amber-500/20 to-red-600/30',marginTop:0 },
+        { id:'card-2',image:'',emoji:'🔷',gradient:'from-blue-600/20 to-purple-600/30',marginTop:16 },
+        { id:'card-3',image:'',emoji:'🪙',gradient:'from-cyan-600/20 to-blue-800/30',marginTop:-8 },
+        { id:'card-4',image:'',emoji:'🥇',gradient:'from-rose-600/20 to-orange-600/30',marginTop:8 }
+    ],
+    games:{}
+};
+
+function getPaymentMethod(name){ return paymentMethods.find(p=>p.name===name); }
+function applyDiscount(price,discount){ const p=Number(price); if(!isFinite(p)||p<0)return 0; const d=Number(discount)||0; return d<=0?p:p*(1-d/100); }
+function convertPrice(usdt,code){ const pm=paymentMethods.find(p=>p.code===code); const p=Number(usdt); if(!isFinite(p))return 0; if(!pm)return p; const r=(typeof pm.rate==='number'&&pm.rate>0)?pm.rate:1; return p*r; }
+function formatPrice(usdt,code){ const pm=paymentMethods.find(p=>p.code===code); if(!pm)return '-'; const v=convertPrice(usdt,code);
+    return `${pm.symbol} ${v.toLocaleString('es-VE',{minimumFractionDigits:pm.decimals,maximumFractionDigits:pm.decimals})}`; }
+function toObject(input){ if(!input)return{}; if(Array.isArray(input)){const o={}; Object.keys(input).forEach(k=>o[k]=input[k]); return o;} return typeof input==='object'?input:{}; }
+function escapeHtml(s){ return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function normalizePhone(p){ return String(p||'').replace(/\D/g,''); }
+
+// ============ CLIENTE ============
+function loadClientFromStorage(){
+    try { const raw = localStorage.getItem(CLIENT_KEY); if(!raw) return null; const c = JSON.parse(raw);
+        if (c && c.phone) return c; } catch(e){}
+    return null;
+}
+function saveClientToStorage(c){ try { localStorage.setItem(CLIENT_KEY, JSON.stringify(c)); } catch(e){} }
+function clearClientStorage(){ try { localStorage.removeItem(CLIENT_KEY); } catch(e){} }
+function showPhoneLogin(){ document.getElementById('phoneLoginScreen').classList.remove('hidden'); }
+function hidePhoneLogin(){ document.getElementById('phoneLoginScreen').classList.add('hidden'); }
+function showNotRegistered(phone){
+    document.getElementById('notRegisteredScreen').classList.remove('hidden');
+    const msg = `Hola, quiero registrarme en X-Store.%0A%0AMi número es: ${phone}`;
+    document.getElementById('waRequestLink').href = `https://wa.me/${WHATSAPP_NUMBER}?text=${msg}`;
+}
+function hideNotRegistered(){ document.getElementById('notRegisteredScreen').classList.add('hidden'); }
+function resetLogin(){
+    hideNotRegistered();
+    document.getElementById('loginPhone').value = '';
+    document.getElementById('phoneStatus').classList.add('hidden');
+    document.getElementById('phoneLoginBtn').disabled = true;
+    showPhoneLogin();
+}
+async function doPhoneLogin(){
+    const phone = normalizePhone(document.getElementById('loginPhone').value);
+    if (phone.length < 8) return;
+    const btn = document.getElementById('phoneLoginBtn');
+    btn.disabled = true; btn.innerHTML = 'VERIFICANDO...';
+    try {
+        const res = await fetch(`${API_CLIENTS}?action=lookup&phone=${encodeURIComponent(phone)}`);
+        const data = await res.json();
+        if (data.found) {
+            client = { phone: data.client.phone, firstName: data.client.firstName, lastName: data.client.lastName };
+            saveClientToStorage(client);
+            hidePhoneLogin(); hideNotRegistered(); updateClientBadge();
+        } else { hidePhoneLogin(); showNotRegistered(phone); }
+    } catch(e){
+        document.getElementById('phoneStatus').classList.remove('hidden');
+        document.getElementById('phoneStatus').className = 'text-[11px] mt-1.5 text-rose-400';
+        document.getElementById('phoneStatus').innerText = 'Error de conexión';
+    } finally { btn.disabled=false; btn.innerHTML = '<i data-lucide="log-in" class="w-5 h-5"></i><span>CONTINUAR</span>'; lucide.createIcons(); }
+}
+function logoutClient(){
+    if (!confirm('¿Cerrar sesión en este dispositivo?')) return;
+    client = null; clearClientStorage();
+    document.getElementById('clientBadge').classList.add('hidden');
+    document.getElementById('clientBadge').classList.remove('flex');
+    resetLogin();
+}
+function updateClientBadge(){
+    if (!client) return;
+    const el = document.getElementById('clientBadge');
+    el.classList.remove('hidden'); el.classList.add('flex');
+    document.getElementById('clientNameBadge').innerText = `${client.firstName} ${client.lastName}`.trim() || client.phone;
+}
+
+// ============ HERO ============
+function renderHeroCards(){
+    const g = document.getElementById('heroCardsGrid'); if(!g) return; g.innerHTML='';
+    config_heroCards.forEach(card=>{
+        const content = card.image
+            ? `<img src="${card.image}" class="w-full h-full object-cover rounded-xl" onerror="this.outerHTML='<span class=\\'text-3xl\\'>${card.emoji}</span>'">`
+            : `<span class="text-3xl">${card.emoji}</span>`;
+        const el = document.createElement('div');
+        el.className = 'glass-card p-3 rounded-2xl';
+        if (card.marginTop) el.style.marginTop = card.marginTop + 'px';
+        el.innerHTML = `<div class="h-28 rounded-xl bg-gradient-to-br ${card.gradient} flex flex-col items-center justify-center overflow-hidden">${content}</div>`;
+        g.appendChild(el);
+    });
+}
+
+// ============ JUEGOS ============
+function renderGameCards(){
+    const grid = document.getElementById('gamesGrid'); if(!grid) return;
+    grid.querySelectorAll('.game-card-skeleton').forEach(e=>e.remove());
+    grid.querySelectorAll('.game-card').forEach(e=>e.remove());
+    const keys = Object.keys(gameData);
+    if (keys.length===0){ grid.innerHTML='<div class="col-span-full glass-card p-8 rounded-2xl text-center text-gray-400">No hay juegos.</div>'; return; }
+    keys.forEach(key=>{
+        const g = gameData[key];
+        const hasDiscount = g.discount>0 && !g.paused;
+        const isPaused = g.paused;
+        const logoHtml = g.logo ? `<img src="${g.logo}" class="w-12 h-12 rounded-xl object-cover border-2 border-cyber-cyan/40 bg-black/40">` : `<span class="text-3xl">${g.icon}</span>`;
+        const tagsHtml = (g.tags||[]).length ? `<div class="flex flex-wrap gap-1.5">${g.tags.map(t=>`<span class="tag-pill">${escapeHtml(t)}</span>`).join('')}</div>` : '';
+        const card = document.createElement('div');
+        card.className = 'game-card glass-card glass-card-hover rounded-2xl overflow-hidden cursor-pointer group flex flex-col justify-between relative';
+        card.setAttribute('onclick', `openRechargeModal('${key}')`);
+        card.setAttribute('data-title', `${g.title.toLowerCase()} ${key}`);
+        card.innerHTML = `
+            ${hasDiscount?`<div class="badge-discount">-${g.discount}%</div>`:''}
+            <div class="relative h-48 overflow-hidden bg-gradient-to-b from-cyan-600/30 to-slate-900">
+                <div class="absolute inset-0 bg-cover bg-center group-hover:scale-110 transition-transform duration-500" style="background-image: url('${g.cover}');"></div>
+                <div class="absolute inset-0 bg-gradient-to-t from-[#12121e] via-[#12121e]/40 to-transparent"></div>
+                ${isPaused?`<div class="paused-overlay"><div class="text-3xl">⏸</div><p class="font-orbitron font-bold text-amber-400 text-sm">PAUSADO</p></div>`:''}
+                <div class="absolute bottom-3 left-4 right-4 z-10 flex items-center gap-3">
+                    <div class="shrink-0">${logoHtml}</div>
+                    <h3 class="font-orbitron text-xl font-bold text-white drop-shadow-lg">${escapeHtml(g.title)}</h3>
+                </div>
+            </div>
+            <div class="p-5 space-y-3 flex-1 flex flex-col justify-between">
+                <div class="space-y-2">
+                    <p class="text-xs text-gray-400">${escapeHtml(g.description||'Recarga al instante.')}</p>
+                    ${tagsHtml}
+                </div>
+                <div class="flex items-center justify-between pt-2 border-t border-slate-800">
+                    <span class="text-xs text-gray-400">${isPaused?'No disponible':'Ver precios'}</span>
+                    <button class="px-4 py-2 rounded-lg ${isPaused?'bg-amber-500/20 text-amber-400 border-amber-500/40':'bg-cyber-cyan/10 text-cyber-cyan border-cyber-cyan/30'} font-orbitron text-xs font-bold border">${isPaused?'Pausado':'Recargar'}</button>
+                </div>
+            </div>`;
+        grid.appendChild(card);
+    });
+    lucide.createIcons();
+}
+
+function renderPaymentMethodsPublic(){
+    const grid = document.getElementById('paymentMethodsGrid'); if(!grid) return; grid.innerHTML='';
+    const enabled = paymentMethods.filter(p=>p.enabled!==false);
+    if (enabled.length===0){ grid.innerHTML='<div class="col-span-full glass-card p-8 rounded-2xl text-center text-gray-400">No hay métodos.</div>'; return; }
+    enabled.forEach(pm=>{
+        const card = document.createElement('div');
+        card.className = 'glass-card p-6 rounded-2xl border-slate-800 hover:border-cyber-cyan/50 transition-all text-center space-y-4';
+        card.innerHTML = `
+            <div class="w-16 h-16 mx-auto rounded-2xl bg-cyber-cyan/10 border border-cyber-cyan/30 flex items-center justify-center text-3xl">${pm.icon}</div>
+            <h3 class="font-orbitron text-lg font-bold text-white">${escapeHtml(pm.name)}</h3>
+            <p class="text-xs text-gray-400">Pago en ${escapeHtml(pm.label)}</p>
+            <span class="inline-block px-3 py-1 rounded-full bg-cyber-cyan/10 text-cyber-cyan text-[11px] font-semibold">${escapeHtml(pm.label)}</span>`;
+        grid.appendChild(card);
+    });
+}
+
+// ============ FETCH ============
+async function fetchConfig(){
+    try {
+        const res = await fetch(`${API_CONFIG}?t=${Date.now()}`, { cache:'no-cache' });
+        if (!res.ok) throw new Error('HTTP '+res.status);
+        applyConfig(await res.json());
+    } catch(e){
+        console.error('Config error', e);
+        if (!gameData || Object.keys(gameData).length===0) applyConfig(FALLBACK_CONFIG);
+    }
+}
+async function fetchLists(){
+    try {
+        const res = await fetch(`${API_LISTS}?t=${Date.now()}`, { cache:'no-cache' });
+        const data = await res.json();
+        bancosList = Array.isArray(data.bancos) ? data.bancos : [];
+    } catch(e){ bancosList = []; }
+}
+function applyConfig(cfg){
+    maintenanceMode = cfg.maintenance === true;
+    const ms = document.getElementById('maintenanceScreen');
+    if (maintenanceMode){ ms.classList.remove('hidden'); document.body.style.overflow='hidden'; return; }
+    ms.classList.add('hidden'); document.body.style.overflow='';
+
+    paymentMethods = (cfg.paymentMethods && cfg.paymentMethods.length) ? cfg.paymentMethods : FALLBACK_CONFIG.paymentMethods;
+    paymentMethods.forEach(pm=>{
+        if (typeof pm.rate!=='number'||pm.rate<=0) pm.rate=1;
+        if (!Array.isArray(pm.fields)) pm.fields=[];
+        if (typeof pm.qr !== 'string') pm.qr = '';
+    });
+
+    const games = toObject(cfg.games);
+    Object.keys(games).forEach(k=>{
+        const g = games[k];
+        if (typeof g.idEnabled!=='boolean') g.idEnabled=true;
+        if (!g.idMode) g.idMode='id';
+        if (typeof g.paused!=='boolean') g.paused=false;
+        if (typeof g.discount!=='number') g.discount=0;
+        if (typeof g.logo!=='string') g.logo='';
+        if (!Array.isArray(g.tags)) g.tags=[];
+        g.packages = (g.packages||[]).map(p=>({
+            id: p.id || ('pkg-'+Math.random().toString(36).slice(2,8)),
+            name: String(p.name||'Sin nombre'),
+            price: (isFinite(Number(p.price))&&Number(p.price)>0)?Number(p.price):0.01
+        }));
+    });
+    gameData = games;
+
+    config_heroCards = (cfg.heroCards && cfg.heroCards.length===4) ? cfg.heroCards : FALLBACK_CONFIG.heroCards;
+
+    if (document.getElementById('gamesGrid')){
+        renderHeroCards(); renderGameCards(); renderPaymentMethodsPublic();
+    }
+}
+
+// ============ INIT ============
+document.addEventListener('DOMContentLoaded', async ()=>{
+    lucide.createIcons();
+    fetchConfig();
+    fetchLists();
+
+    client = loadClientFromStorage();
+    if (client){
+        try {
+            const res = await fetch(`${API_CLIENTS}?action=lookup&phone=${encodeURIComponent(client.phone)}`);
+            const data = await res.json();
+            if (data.found){
+                client.firstName = data.client.firstName;
+                client.lastName = data.client.lastName;
+                saveClientToStorage(client);
+                updateClientBadge();
+            } else { clearClientStorage(); client = null; showPhoneLogin(); }
+        } catch(e){ updateClientBadge(); }
+    } else showPhoneLogin();
+
+    const loginPhone = document.getElementById('loginPhone');
+    const phoneStatus = document.getElementById('phoneStatus');
+    const phoneBtn = document.getElementById('phoneLoginBtn');
+    loginPhone.addEventListener('input', ()=>{
+        const v = normalizePhone(loginPhone.value);
+        loginPhone.value = v;
+        if (v.length >= 8){ phoneBtn.disabled = false; phoneStatus.classList.remove('hidden'); phoneStatus.className = 'text-[11px] mt-1.5 text-cyber-cyan'; phoneStatus.innerText = 'Toca CONTINUAR'; }
+        else { phoneBtn.disabled = true; phoneStatus.classList.add('hidden'); }
+    });
+    loginPhone.addEventListener('keydown', e=>{ if (e.key==='Enter' && !phoneBtn.disabled) doPhoneLogin(); });
+
+    document.addEventListener('keydown', e=>{
+        if (e.key==='Escape' && !document.getElementById('rechargeModal').classList.contains('hidden')) closeRechargeModal();
+    });
+    document.addEventListener('visibilitychange', ()=>{ if(!document.hidden){ fetchConfig(); fetchLists(); } });
+});
+
+function filterGames(q){
+    q = (q||'').toLowerCase().trim();
+    const cards = document.querySelectorAll('.game-card');
+    cards.forEach(c=>{
+        const t = (c.getAttribute('data-title')||'').toLowerCase();
+        if (t.includes(q)){ c.classList.remove('hidden'); c.classList.add('flex'); }
+        else { c.classList.add('hidden'); c.classList.remove('flex'); }
+    });
+    if (document.getElementById('searchInput')) document.getElementById('searchInput').value = q;
+    if (document.getElementById('searchInputMobile')) document.getElementById('searchInputMobile').value = q;
+}
+
+// ============ MODAL ============
+function openRechargeModal(key){
+    const data = gameData[key]; if (!data) return;
+    if (!client){ showPhoneLogin(); return; }
+
+    currentOrder = { gameKey:key, playerId:'', serverId:'', packages:[], paymentMethod:'', reference:'', bank:'', capture:null };
+
+    document.getElementById('modalGameTitle').innerText = `Recargar ${data.title}`;
+    const mi = document.getElementById('modalGameIcon');
+    if (data.logo){ mi.innerHTML = `<img src="${data.logo}" class="w-full h-full object-cover rounded-xl">`; mi.classList.add('overflow-hidden','p-0'); }
+    else { mi.innerHTML = data.icon || '🎮'; mi.classList.remove('overflow-hidden','p-0'); }
+
+    const dEl = document.getElementById('modalGameDiscount');
+    if (data.discount>0 && !data.paused){ dEl.classList.remove('hidden'); dEl.innerText = `🔥 OFERTA -${data.discount}%`; }
+    else dEl.classList.add('hidden');
+
+    const pn = document.getElementById('pausedNotice');
+    const wrap = document.getElementById('stepContentWrap');
+    const stepper = document.getElementById('stepStepper');
+
+    if (data.paused){
+        pn.classList.remove('hidden'); wrap.classList.add('hidden'); stepper.classList.add('hidden');
+        document.getElementById('nextBtn').classList.add('hidden');
+        document.getElementById('backBtn').classList.add('hidden');
+        document.getElementById('sendOrderBtn').classList.add('hidden');
+        document.getElementById('rechargeModal').classList.remove('hidden');
+        document.body.classList.add('modal-open'); lucide.createIcons(); return;
+    } else {
+        pn.classList.add('hidden'); wrap.classList.remove('hidden'); stepper.classList.remove('hidden');
+    }
+
+    ['playerIdInput','playerIdInput2','serverIdInput','refInput'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+    const bankSel = document.getElementById('bankInput');
+    if (bankSel){ bankSel.value=''; renderBankOptions(); }
+    removeCapture();
+
+    configureIdStep(data);
+    renderPaymentMethodsModal();
+    renderPackages();
+    updateLiveTotal();
+    updateSummary();
+
+    currentStep = 1;
+    renderStep();
+
+    document.getElementById('rechargeModal').classList.remove('hidden');
+    document.body.classList.add('modal-open');
+    setTimeout(()=>{
+        const needsId = data.idEnabled !== false && data.idMode !== 'no_id';
+        if (needsId) document.getElementById('playerIdInput')?.focus();
+    }, 120);
+    lucide.createIcons();
+}
+
+function closeRechargeModal(){
+    document.getElementById('rechargeModal').classList.add('hidden');
+    document.body.classList.remove('modal-open');
+}
+
+// ============ STEPPER ============
+function renderStep(){
+    for (let i=1; i<=TOTAL_STEPS; i++){
+        const dot = document.getElementById('stepDot'+i);
+        const line = document.getElementById('stepLine'+i);
+        const panel = document.getElementById('stepPanel'+i);
+        dot.classList.remove('active','done');
+        if (i < currentStep) dot.classList.add('done');
+        if (i === currentStep) dot.classList.add('active');
+        if (line){
+            if (i < currentStep) line.classList.add('done'); else line.classList.remove('done');
+        }
+        if (panel) panel.classList.toggle('active', i === currentStep);
+    }
+
+    document.getElementById('backBtn').classList.toggle('hidden', currentStep === 1);
+    document.getElementById('nextBtn').classList.toggle('hidden', currentStep === TOTAL_STEPS);
+    document.getElementById('sendOrderBtn').classList.toggle('hidden', currentStep !== TOTAL_STEPS);
+
+    if (currentStep === 2){
+        renderPaymentFields();
+        renderQR();
+        renderBankOptions();
+        togglePaymentDataSection();
+    }
+    updateStepButtonsState();
+    lucide.createIcons();
+}
+
+function updateStepButtonsState(){
+    const nextBtn = document.getElementById('nextBtn');
+    const sendBtn = document.getElementById('sendOrderBtn');
+    if (currentStep === TOTAL_STEPS){
+        sendBtn.disabled = !canSubmit();
+    } else {
+        nextBtn.disabled = !canAdvanceFromStep1();
+    }
+}
+
+function canAdvanceFromStep1(){
+    const data = gameData[currentOrder.gameKey];
+    if (!data) return false;
+    const needsId = data.idEnabled !== false && data.idMode !== 'no_id';
+    if (needsId){
+        const minLen = data.minIdLength || 4;
+        if (data.idMode === 'id_server'){
+            if (currentOrder.playerId.length < minLen || currentOrder.serverId.length < 2) return false;
+        } else {
+            if (currentOrder.playerId.length < minLen) return false;
+        }
+    }
+    if (!currentOrder.paymentMethod) return false;
+    if (currentOrder.packages.length === 0) return false;
+    return true;
+}
+
+function nextStep(){
+    if (currentStep === 1 && !canAdvanceFromStep1()){ showStepError(); return; }
+    if (currentStep < TOTAL_STEPS){ currentStep++; renderStep(); }
+}
+function prevStep(){
+    if (currentStep > 1){ currentStep--; renderStep(); }
+}
+function showStepError(){
+    const data = gameData[currentOrder.gameKey];
+    const needsId = data && data.idEnabled !== false && data.idMode !== 'no_id';
+    if (needsId){
+        const minLen = data.minIdLength || 4;
+        const idOk = data.idMode === 'id_server'
+            ? (currentOrder.playerId.length >= minLen && currentOrder.serverId.length >= 2)
+            : (currentOrder.playerId.length >= minLen);
+        if (!idOk){ alert('Ingresa correctamente tu ID.'); return; }
+    }
+    if (!currentOrder.paymentMethod){ alert('Selecciona un método de pago.'); return; }
+    if (currentOrder.packages.length === 0){ alert('Selecciona al menos un paquete.'); return; }
+}
+
+// ============ PASO 1: ID ============
+function configureIdStep(data){
+    const sw = document.getElementById('idSimpleWrap');
+    const srw = document.getElementById('idServerWrap');
+    const nw = document.getElementById('noIdWrap');
+    const helper = document.getElementById('idHelperText');
+    const enabled = data.idEnabled !== false && data.idMode !== 'no_id';
+    const mode = enabled ? (data.idMode || 'id') : 'no_id';
+    sw.classList.add('hidden'); srw.classList.add('hidden'); nw.classList.add('hidden');
+    if (mode === 'no_id'){ nw.classList.remove('hidden'); helper.classList.add('hidden'); }
+    else if (mode === 'id_server'){ srw.classList.remove('hidden'); helper.classList.remove('hidden'); helper.innerText = 'ID + Server obligatorios.'; }
+    else { sw.classList.remove('hidden'); helper.classList.remove('hidden'); helper.innerText = 'Copia correctamente el ID.'; }
+}
+
+function validateIdInput(){
+    const data = gameData[currentOrder.gameKey]; if(!data) return;
+    const mode = data.idMode || 'id';
+    if (mode === 'id_server'){
+        currentOrder.playerId = document.getElementById('playerIdInput2').value.trim();
+        currentOrder.serverId = document.getElementById('serverIdInput').value.trim();
+    } else {
+        currentOrder.playerId = document.getElementById('playerIdInput').value.trim();
+        currentOrder.serverId = '';
+    }
+    updateSummary(); updateStepButtonsState();
+}
+
+// ============ PASO 1: MÉTODO ============
+function renderPaymentMethodsModal(){
+    const grid = document.getElementById('paymentMethodsModal'); grid.innerHTML='';
+    const enabled = paymentMethods.filter(p=>p.enabled!==false);
+    enabled.forEach(pm=>{
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'pay-btn glass-card p-3 rounded-xl border-slate-700 hover:border-cyber-cyan text-center flex flex-col items-center justify-center gap-1 transition-all';
+        btn.setAttribute('data-pay', pm.name);
+        btn.onclick = ()=> selectPaymentMethod(pm.name);
+        btn.innerHTML = `<span class="text-2xl">${pm.icon}</span><span class="text-xs font-bold text-white">${escapeHtml(pm.name)}</span><span class="text-[10px] text-cyan-300">${escapeHtml(pm.label)}</span>`;
+        if (currentOrder.paymentMethod===pm.name) btn.classList.add('selected');
+        grid.appendChild(btn);
+    });
+}
+function selectPaymentMethod(name){
+    currentOrder.paymentMethod = name;
+    document.querySelectorAll('.pay-btn').forEach(b=>{
+        if (b.getAttribute('data-pay')===name) b.classList.add('selected'); else b.classList.remove('selected');
+    });
+    renderPackages(); // re-render para actualizar precios con la nueva moneda
+    updateLiveTotal();
+    updateSummary();
+    updateStepButtonsState();
+}
+
+// ============ PASO 1: PAQUETES ============
+function renderPackages(){
+    const data = gameData[currentOrder.gameKey]; if(!data) return;
+    const grid = document.getElementById('packageGrid');
+    const hint = document.getElementById('packageHint');
+    grid.innerHTML='';
+    const pm = currentOrder.paymentMethod ? getPaymentMethod(currentOrder.paymentMethod) : null;
+    const currency = pm ? pm.code : null;
+    if (!currency) hint.classList.remove('hidden'); else hint.classList.add('hidden');
+
+    (data.packages||[]).forEach(pkg=>{
+        const finalPrice = applyDiscount(pkg.price, data.discount);
+        const hasDiscount = data.discount>0;
+        const btn = document.createElement('div');
+        btn.className = 'pkg-btn glass-card p-3 rounded-xl border-slate-700 text-left transition-all flex flex-col justify-between relative cursor-pointer';
+        btn.setAttribute('data-pkg-id', pkg.id);
+        const inOrder = currentOrder.packages.find(p=>p.id===pkg.id);
+        if (inOrder) btn.classList.add('selected');
+        const priceText = currency ? formatPrice(finalPrice, currency) : '— — —';
+        const oldPriceText = (currency && hasDiscount) ? formatPrice(pkg.price, currency) : null;
+        btn.innerHTML = `
+            <div class="pkg-check"></div>
+            <div class="flex items-start justify-between gap-2">
+                <span class="text-xs font-bold text-white pr-5 flex-1">${escapeHtml(pkg.name)}</span>
+            </div>
+            <div class="flex flex-col mt-2">
+                ${oldPriceText?`<span class="text-[10px] text-gray-500 line-through">${oldPriceText}</span>`:''}
+                <span class="text-xs font-orbitron ${currency?(hasDiscount?'text-rose-400':'text-cyber-cyan'):'text-gray-500'} font-bold">${priceText}</span>
+            </div>
+            ${inOrder?`
+                <div class="flex items-center justify-between mt-2 pt-2 border-t border-slate-800">
+                    <span class="text-[10px] text-gray-400">Cantidad</span>
+                    <div class="flex items-center gap-1.5" onclick="event.stopPropagation()">
+                        <button class="qty-btn" onclick="changeQty('${pkg.id}', -1)">−</button>
+                        <span class="qty-num">${inOrder.qty}</span>
+                        <button class="qty-btn" onclick="changeQty('${pkg.id}', 1)">+</button>
+                    </div>
+                </div>`:''}`;
+        btn.onclick = ()=> togglePackage(pkg);
+        grid.appendChild(btn);
+    });
+    updatePkgCounter();
+}
+function togglePackage(pkg){
+    const idx = currentOrder.packages.findIndex(p=>p.id===pkg.id);
+    if (idx>=0) currentOrder.packages.splice(idx,1);
+    else currentOrder.packages.push({ ...pkg, qty:1 });
+    renderPackages(); updateLiveTotal(); updateSummary(); updateStepButtonsState();
+}
+function changeQty(pkgId, delta){
+    const item = currentOrder.packages.find(p=>p.id===pkgId); if (!item) return;
+    item.qty = Math.max(1, Math.min(99, item.qty + delta));
+    renderPackages(); updateLiveTotal(); updateSummary(); updateStepButtonsState();
+}
+function updatePkgCounter(){
+    const c = document.getElementById('pkgCounter');
+    const totalUnits = currentOrder.packages.reduce((s,p)=>s+p.qty, 0);
+    if (totalUnits>0){ c.classList.remove('hidden'); c.innerText = `${totalUnits} unidad${totalUnits>1?'es':''}`; }
+    else c.classList.add('hidden');
+}
+
+// ============ TOTAL EN VIVO (paso 1) ============
+function updateLiveTotal(){
+    const item = gameData[currentOrder.gameKey];
+    const pm = currentOrder.paymentMethod ? getPaymentMethod(currentOrder.paymentMethod) : null;
+    const liveTotal = document.getElementById('liveTotal');
+    const liveSummary = document.getElementById('livePkgSummary');
+    const hint = document.getElementById('liveTotalHint');
+
+    if (!item){ liveTotal.innerText='—'; liveSummary.innerText='—'; hint.classList.remove('hidden'); return; }
+
+    if (currentOrder.packages.length === 0){
+        liveSummary.innerText = 'Ninguno';
+        liveTotal.innerText = '—';
+        hint.classList.remove('hidden');
+        hint.innerText = 'Selecciona paquetes para ver el total';
+        return;
+    }
+    hint.classList.add('hidden');
+
+    const totalUnits = currentOrder.packages.reduce((s,p)=>s+p.qty, 0);
+    liveSummary.innerText = `${currentOrder.packages.length} paquete${currentOrder.packages.length>1?'s':''} · ${totalUnits} ud${totalUnits>1?'s':''}`;
+
+    if (pm){
+        const total = calcTotal();
+        liveTotal.innerText = formatPrice(total, pm.code);
+    } else {
+        liveTotal.innerText = '— elige método —';
+    }
+}
+
+// ============ PASO 2: DATOS ============
+function togglePaymentDataSection(){
+    const pm = currentOrder.paymentMethod ? getPaymentMethod(currentOrder.paymentMethod) : null;
+    if (!pm) return;
+    document.getElementById('refWrap').style.display = pm.askReference ? '' : 'none';
+    document.getElementById('bankWrap').style.display = pm.askBank ? '' : 'none';
+    document.getElementById('captureWrap').style.display = pm.askCapture ? '' : 'none';
+}
+
+function renderPaymentFields(){
+    const list = document.getElementById('paymentFieldsList');
+    list.innerHTML = '';
+    const pm = currentOrder.paymentMethod ? getPaymentMethod(currentOrder.paymentMethod) : null;
+    if (!pm) return;
+    const fields = (pm.fields||[]).filter(f=>f.label && f.value);
+    if (fields.length === 0){ list.innerHTML = '<p class="text-[11px] text-gray-500 italic text-center py-2">No hay datos configurados.</p>'; return; }
+    fields.forEach(f=>{
+        const row = document.createElement('div');
+        row.className = 'flex items-center justify-between gap-2 py-1.5 px-2 rounded-lg bg-black/40 border border-slate-800';
+        row.innerHTML = `
+            <div class="flex flex-col min-w-0 flex-1">
+                <span class="text-[9px] text-gray-500 uppercase font-orbitron font-bold">${escapeHtml(f.label)}</span>
+                <span class="text-xs text-white font-mono truncate">${escapeHtml(f.value)}</span>
+            </div>
+            <button type="button" onclick="copyText('${escapeHtml(f.value).replace(/'/g,"\\'")}', this)" class="copy-btn shrink-0">COPIAR</button>`;
+        list.appendChild(row);
+    });
+}
+
+function renderQR(){
+    const qrBox = document.getElementById('qrBox');
+    const qrImg = document.getElementById('qrImage');
+    const pm = currentOrder.paymentMethod ? getPaymentMethod(currentOrder.paymentMethod) : null;
+    if (pm && pm.qr && pm.qr.trim() !== ''){
+        qrBox.classList.remove('hidden');
+        qrImg.src = pm.qr;
+    } else {
+        qrBox.classList.add('hidden');
+        qrImg.src = '';
+    }
+}
+
+function renderBankOptions(){
+    const sel = document.getElementById('bankInput'); if (!sel) return;
+    const current = sel.value;
+    sel.innerHTML = '<option value="">— Selecciona tu banco —</option>' +
+        bancosList.map(b=>`<option value="${escapeHtml(b)}">${escapeHtml(b)}</option>`).join('');
+    if (current) sel.value = current;
+}
+
+function validatePaymentData(){
+    currentOrder.reference = document.getElementById('refInput').value.trim();
+    currentOrder.bank = document.getElementById('bankInput').value.trim();
+    updateSummary(); updateStepButtonsState();
+}
+
+// ============ CAPTURA ============
+function onCaptureSelected(ev){
+    const file = ev.target.files[0]; if (!file) return;
+    if (!file.type.startsWith('image/')){ alert('Solo imágenes'); return; }
+    if (file.size > 5*1024*1024){ alert('Imagen muy grande (máx 5MB)'); return; }
+    compressImage(file, 1000, 0.75).then(dataUrl=>{
+        currentOrder.capture = dataUrl;
+        document.getElementById('capturePreview').classList.remove('hidden');
+        document.getElementById('captureImg').src = dataUrl;
+        document.getElementById('captureStatus').innerText = `✓ Imagen lista (${Math.round(dataUrl.length/1024)} KB)`;
+        document.getElementById('captureStatus').className = 'text-[10px] text-emerald-400 mt-1';
+        updateSummary(); updateStepButtonsState();
+    });
+}
+function removeCapture(){
+    currentOrder.capture = null;
+    const inp = document.getElementById('captureInput'); if (inp) inp.value='';
+    const prev = document.getElementById('capturePreview'); if (prev) prev.classList.add('hidden');
+    const st = document.getElementById('captureStatus');
+    if (st){ st.innerText = 'JPG/PNG · máx 5MB · se comprime automáticamente'; st.className = 'text-[10px] text-gray-500 mt-1'; }
+    updateSummary(); updateStepButtonsState();
+}
+function compressImage(file, maxDim, quality){
+    return new Promise(resolve=>{
+        const reader = new FileReader();
+        reader.onload = e=>{
+            const img = new Image();
+            img.onload = ()=>{
+                let w = img.width, h = img.height;
+                if (w>h && w>maxDim){ h = h*(maxDim/w); w = maxDim; }
+                else if (h>w && h>maxDim){ w = w*(maxDim/h); h = maxDim; }
+                const canvas = document.createElement('canvas');
+                canvas.width = w; canvas.height = h;
+                canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+                resolve(canvas.toDataURL('image/jpeg', quality));
+            };
+            img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    });
+}
+
+// ============ RESUMEN ============
+function calcTotal(){
+    const data = gameData[currentOrder.gameKey]; if(!data) return 0;
+    let sum = 0;
+    currentOrder.packages.forEach(p=>{ sum += applyDiscount(p.price, data.discount) * p.qty; });
+    return sum;
+}
+function updateSummary(){
+    const item = gameData[currentOrder.gameKey];
+    document.getElementById('summaryGame').innerText = item ? item.title : '-';
+
+    if (item && item.idMode === 'id_server'){
+        const sv = currentOrder.serverId ? ` (SV: ${currentOrder.serverId})` : '';
+        document.getElementById('summaryId').innerText = currentOrder.playerId ? currentOrder.playerId + sv : 'Pendiente...';
+    } else if (item && (item.idEnabled === false || item.idMode === 'no_id')){
+        document.getElementById('summaryId').innerText = 'No requerido';
+    } else {
+        document.getElementById('summaryId').innerText = currentOrder.playerId || 'Pendiente...';
+    }
+
+    const sPkg = document.getElementById('summaryPackage');
+    const sList = document.getElementById('summaryPackagesList');
+    if (currentOrder.packages.length===0){ sPkg.innerText='Ninguno'; sList.innerHTML=''; }
+    else if (currentOrder.packages.length===1){ const p = currentOrder.packages[0]; sPkg.innerText = `${p.name} x${p.qty}`; sList.innerHTML=''; }
+    else {
+        const totalUnits = currentOrder.packages.reduce((s,p)=>s+p.qty,0);
+        sPkg.innerText = `${currentOrder.packages.length} paquetes · ${totalUnits} uds`;
+        sList.innerHTML = currentOrder.packages.map(p=>`• ${escapeHtml(p.name)} x${p.qty}`).join('<br>');
+    }
+
+    document.getElementById('summaryPayment').innerText = currentOrder.paymentMethod || 'No seleccionado';
+
+    const pm = currentOrder.paymentMethod ? getPaymentMethod(currentOrder.paymentMethod) : null;
+    const totalEl = document.getElementById('summaryTotal');
+    if (currentOrder.packages.length>0 && pm && item){
+        totalEl.innerText = formatPrice(calcTotal(), pm.code);
+    } else totalEl.innerText = '-';
+}
+
+function canSubmit(){
+    const item = gameData[currentOrder.gameKey];
+    const pm = currentOrder.paymentMethod ? getPaymentMethod(currentOrder.paymentMethod) : null;
+    if (!item || !pm || !client) return false;
+    if (currentOrder.packages.length === 0) return false;
+
+    const needsId = item.idEnabled !== false && item.idMode !== 'no_id';
+    if (needsId){
+        const minLen = item.minIdLength || 4;
+        if (item.idMode === 'id_server'){ if (currentOrder.playerId.length < minLen || currentOrder.serverId.length < 2) return false; }
+        else { if (currentOrder.playerId.length < minLen) return false; }
+    }
+    if (pm.askReference && currentOrder.reference.length < 4) return false;
+    if (pm.askBank && currentOrder.bank.length < 2) return false;
+    if (pm.askCapture && !currentOrder.capture) return false;
+    return true;
+}
+
+// ============ ENVÍO ============
+async function submitOrder(){
+    const item = gameData[currentOrder.gameKey];
+    const pm = getPaymentMethod(currentOrder.paymentMethod);
+    if (!item || !pm || !client) return;
+
+    const totalUSDT = calcTotal();
+    const totalLocal = convertPrice(totalUSDT, pm.code);
+
+    const btn = document.getElementById('sendOrderBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span>ENVIANDO PEDIDO...</span>';
+
+    const payload = {
+        phone: client.phone,
+        gameKey: currentOrder.gameKey,
+        gameTitle: item.title,
+        playerId: currentOrder.playerId,
+        serverId: currentOrder.serverId,
+        packages: currentOrder.packages.map(p=>({ id:p.id, name:p.name, price:p.price, qty:p.qty })),
+        paymentMethod: currentOrder.paymentMethod,
+        paymentFields: {},
+        reference: currentOrder.reference,
+        bank: currentOrder.bank,
+        totalUSDT, totalLocal,
+        currencyCode: pm.code,
+        capture: currentOrder.capture || ''
+    };
+
+    try {
+        const res = await fetch(`${API_ORDERS}?action=create`, {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (!res.ok || !data.ok){
+            alert(data.error || 'Error al enviar. Intenta de nuevo.');
+            btn.disabled = false;
+            btn.innerHTML = '<i data-lucide="check-circle" class="w-5 h-5"></i><span>LISTO, PROCEDER A WHATSAPP</span>';
+            lucide.createIcons();
+            return;
+        }
+        openWhatsApp(item, pm);
+        showSuccessModal(item, pm);
+        closeRechargeModal();
+        btn.disabled = false;
+        btn.innerHTML = '<i data-lucide="check-circle" class="w-5 h-5"></i><span>LISTO, PROCEDER A WHATSAPP</span>';
+        lucide.createIcons();
+    } catch(e){
+        alert('Error de conexión');
+        btn.disabled = false;
+        btn.innerHTML = '<i data-lucide="check-circle" class="w-5 h-5"></i><span>LISTO, PROCEDER A WHATSAPP</span>';
+        lucide.createIcons();
+    }
+}
+
+function buildWhatsAppText(item, pm){
+    const totalUSDT = calcTotal();
+    const totalFormatted = formatPrice(totalUSDT, pm.code);
+    let discountLine = '';
+    if (item.discount>0){
+        const orig = currentOrder.packages.reduce((s,p)=> s + p.price*p.qty, 0);
+        discountLine = `\n🔥 *Oferta:* -${item.discount}% (antes ${formatPrice(orig, pm.code)})`;
+    }
+    let idLine = '';
+    const needsId = item.idEnabled !== false && item.idMode !== 'no_id';
+    if (needsId){
+        if (item.idMode === 'id_server') idLine = `🆔 *ID:* ${currentOrder.playerId}\n🌐 *Server:* ${currentOrder.serverId}\n`;
+        else idLine = `🆔 *ID:* ${currentOrder.playerId}\n`;
+    } else idLine = `🆔 *ID:* No requerido\n`;
+
+    let packagesList = '';
+    currentOrder.packages.forEach((p,i)=>{
+        const finalPrice = applyDiscount(p.price, item.discount) * p.qty;
+        packagesList += `   ${i+1}. ${p.name} x${p.qty} → ${formatPrice(finalPrice, pm.code)}\n`;
+    });
+
+    const clientName = `${client.firstName} ${client.lastName}`.trim();
+
+    return `*SOLICITUD DE RECARGA - X-STORE*\n` +
+           `------------------------------------\n` +
+           `👤 *Cliente:* ${clientName}\n` +
+           `📱 *Teléfono:* ${client.phone}\n` +
+           `🎮 *Juego:* ${item.title}\n` +
+           idLine +
+           `📦 *Paquetes:*\n${packagesList}` +
+           `💳 *Método:* ${currentOrder.paymentMethod}\n` +
+           `📝 *Referencia:* ${currentOrder.reference}\n` +
+           (currentOrder.bank ? `🏦 *Banco emisor:* ${currentOrder.bank}\n` : '') +
+           `💰 *Total:* ${totalFormatted}` +
+           `${discountLine}\n` +
+           `------------------------------------\n` +
+           `✅ Envío el comprobante por aquí.`;
+}
+
+function openWhatsApp(item, pm){
+    const text = buildWhatsAppText(item, pm);
+    window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(text)}`, '_blank');
+}
+function showSuccessModal(item, pm){
+    const text = buildWhatsAppText(item, pm);
+    document.getElementById('waSuccessLink').href = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(text)}`;
+    document.getElementById('successModal').classList.remove('hidden');
+    lucide.createIcons();
+}
+function closeSuccessModal(){ document.getElementById('successModal').classList.add('hidden'); }
+
+function copyText(text, btn){
+    navigator.clipboard.writeText(text).then(()=>{
+        const orig = btn.innerText;
+        btn.innerText = '✓';
+        setTimeout(()=>{ btn.innerText = orig; }, 1200);
+    }).catch(()=>{});
+}
+</script>
+</body>
+</html>
