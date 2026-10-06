@@ -1,0 +1,107 @@
+{
+  "maintenance": false,
+  "whatsapp": "584165570405",
+  "paymentMethods": [
+    {
+      "id": "pm-pagomovil",
+      "name": "Pago Móvil",
+      "code": "VES",
+      "label": "Bs.",
+      "symbol": "Bs.",
+      "decimals": 2,
+      "icon": "🇻🇪",
+      "enabled": true,
+      "rate": 40,
+      "fields": [
+        { "label": "Banco", "value": "Mercantil" },
+        { "label": "Teléfono", "value": "0414-1234567" },
+        { "label": "Cédula", "value": "V-12345678" }
+      ],
+      "askReference": true,
+      "askBank": true,
+      "askCapture": true,
+      "qr": ""
+    },
+    {
+      "id": "pm-binance",
+      "name": "Binance Pay",
+      "code": "USDT",
+      "label": "USDT",
+      "symbol": "USDT",
+      "decimals": 2,
+      "icon": "🟡",
+      "enabled": true,
+      "rate": 1,
+      "fields": [
+        { "label": "Pay ID", "value": "123456789" }
+      ],
+      "askReference": true,
+      "askBank": false,
+      "askCapture": true,
+      "qr": ""
+    }
+  ],
+  "heroCards": [
+    { "id": "card-1", "image": "", "emoji": "💎", "gradient": "from-amber-500/20 to-red-600/30", "marginTop": 0 },
+    { "id": "card-2", "image": "", "emoji": "🔷", "gradient": "from-blue-600/20 to-purple-600/30", "marginTop": 16 },
+    { "id": "card-3", "image": "", "emoji": "🪙", "gradient": "from-cyan-600/20 to-blue-800/30", "marginTop": -8 },
+    { "id": "card-4", "image": "", "emoji": "🥇", "gradient": "from-rose-600/20 to-orange-600/30", "marginTop": 8 }
+  ],
+  "games": {
+    "freefire": {
+      "title": "Free Fire",
+      "icon": "🔥",
+      "logo": "/images/games/freefire-logo.png",
+      "cover": "/images/games/freefire-cover.jpg",
+      "description": "Recarga diamantes al instante.",
+      "tags": ["Popular", "Instantáneo"],
+      "discount": 10,
+      "paused": false,
+      "idEnabled": true,
+      "idMode": "id",
+      "minIdLength": 6,
+      "packages": [
+        { "id": "ff-100", "name": "100 💎", "price": 1.00 },
+        { "id": "ff-310", "name": "310 💎", "price": 3.00 },
+        { "id": "ff-520", "name": "520 💎", "price": 5.00 },
+        { "id": "ff-1060", "name": "1060 💎", "price": 10.00 }
+      ]
+    },
+    "mobilelegends": {
+      "title": "Mobile Legends",
+      "icon": "⚔️",
+      "logo": "/images/games/ml-logo.png",
+      "cover": "/images/games/ml-cover.jpg",
+      "description": "Diamantes MLBB seguros.",
+      "tags": ["MOBA"],
+      "discount": 0,
+      "paused": false,
+      "idEnabled": true,
+      "idMode": "id_server",
+      "minIdLength": 6,
+      "packages": [
+        { "id": "ml-86", "name": "86 💎", "price": 1.50 },
+        { "id": "ml-172", "name": "172 💎", "price": 3.00 },
+        { "id": "ml-257", "name": "257 💎", "price": 4.50 }
+      ]
+    },
+    "roblox": {
+      "title": "Roblox",
+      "icon": "🟥",
+      "logo": "/images/games/roblox-logo.png",
+      "cover": "/images/games/roblox-cover.jpg",
+      "description": "Robux al mejor precio.",
+      "tags": ["Niños"],
+      "discount": 0,
+      "paused": false,
+      "idEnabled": true,
+      "idMode": "id",
+      "minIdLength": 5,
+      "packages": [
+        { "id": "rb-80", "name": "80 Robux", "price": 1.00 },
+        { "id": "rb-400", "name": "400 Robux", "price": 5.00 },
+        { "id": "rb-800", "name": "800 Robux", "price": 10.00 }
+      ]
+    }
+  }
+}
