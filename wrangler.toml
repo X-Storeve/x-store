@@ -1,6 +1,8 @@
 name = "x-store"
-main = "public/index.html"  # ← cambia esto al archivo principal de tu proyecto
 compatibility_date = "2026-10-06"
+
+[assets]
+directory = "./public"
 
 [[kv_namespaces]]
 binding = "XSTORE_KV"
