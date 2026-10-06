@@ -1,5 +1,4 @@
 name = "x-store"
-main = "src/worker.js"  # un archivo JS del lado del servidor
 compatibility_date = "2026-10-06"
 
 [assets]
