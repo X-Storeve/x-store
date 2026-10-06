@@ -1,8 +1,10 @@
 name = "x-store"
+main = "src/worker.js"
 compatibility_date = "2026-10-06"
 
 [assets]
 directory = "./public"
+binding = "ASSETS"
 
 [[kv_namespaces]]
 binding = "XSTORE_KV"
