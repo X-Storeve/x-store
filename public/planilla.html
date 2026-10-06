@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>X-Store | Planilla</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="icon" href="/logo.png">
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Orbitron:wght@600;700;800;900&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@latest"></script>
+<script>
+tailwind.config = { theme: { extend: {
+    colors: { cyber: { bg:'#09090e', card:'#12121e', cyan:'#00f2ff', magenta:'#e000ff' } },
+    fontFamily: { orbitron:['Orbitron','sans-serif'], sans:['Inter','sans-serif'] }
+}}};
+</script>
+<style>
+body { background:#09090e; color:#f8fafc;
+    background-image: radial-gradient(circle at 15% 15%, rgba(0,242,255,0.05) 0%, transparent 40%),
+                      radial-gradient(circle at 85% 85%, rgba(224,0,255,0.05) 0%, transparent 40%);
+    background-attachment: fixed; }
+.glass-card { background: rgba(18,18,30,0.75); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.08); }
+.input-field { width:100%; background:rgba(0,0,0,0.5); border:1px solid #334155; border-radius:.75rem; padding:.75rem 1rem; font-size:.875rem; color:#fff; }
+.input-field:focus { outline:none; border-color:#00f2ff; box-shadow:0 0 0 1px #00f2ff; }
+.loading-overlay { position:fixed; inset:0; z-index:999; background:rgba(9,9,14,.9); display:flex; align-items:center; justify-content:center; }
+.spinner { width:48px; height:48px; border:4px solid rgba(0,242,255,.2); border-top-color:#00f2ff; border-radius:50%; animation: spin 1s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+::-webkit-scrollbar { width:8px; } ::-webkit-scrollbar-thumb { background:#1e1e2e; border-radius:4px; }
+.tab-btn { transition: all .2s; border-bottom:2px solid transparent; }
+.tab-btn.active { color: #00f2ff !important; border-bottom-color: #00f2ff !important; }
+.tab-btn:not(.active) { color: #94a3b8; }
+.tab-btn:hover:not(.active) { color: #fff; }
+.tab-badge { display:inline-flex; align-items:center; justify-content:center; min-width:20px; height:20px; padding:0 6px; border-radius:999px; background:#e000ff; color:#fff; font-size:11px; font-weight:900; margin-left:6px; }
+.status-pill { font-size:10px; font-weight:700; padding:3px 9px; border-radius:999px; display:inline-block; }
+.status-pending { background:rgba(251,191,36,.15); color:#fbbf24; border:1px solid rgba(251,191,36,.3); }
+.status-verified { background:rgba(96,165,250,.15); color:#60a5fa; border:1px solid rgba(96,165,250,.3); }
+.status-completed { background:rgba(16,185,129,.15); color:#10b981; border:1px solid rgba(16,185,129,.3); }
+.status-rejected { background:rgba(244,63,94,.15); color:#f43f5e; border:1px solid rgba(244,63,94,.3); }
+.capture-thumb { max-height:80px; border-radius:8px; border:1px solid rgba(0,242,255,.3); cursor:zoom-in; }
+.btn-spinner { display:inline-block; width:14px; height:14px; border:2px solid rgba(0,0,0,.3); border-top-color:#000; border-radius:50%; animation: bspin .8s linear infinite; }
+@keyframes bspin { to { transform:rotate(360deg); } }
+.processing { opacity:.6; pointer-events:none; }
+</style>
+</head>
+<body class="font-sans antialiased min-h-screen">
+
+<div id="loadingOverlay" class="loading-overlay">
+    <div class="text-center">
+        <div class="spinner mx-auto"></div>
+        <p id="loadingText" class="text-cyber-cyan font-orbitron text-sm mt-4">Verificando sesión...</p>
+    </div>
+</div>
+
+<div id="app" class="hidden">
+<header class="sticky top-0 z-40 bg-[#09090e]/95 backdrop-blur-md border-b border-cyan-500/20">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-3">
+        <div class="flex items-center gap-3">
+            <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-cyber-cyan to-cyber-magenta flex items-center justify-center font-orbitron font-black text-black">X</div>
+            <div>
+                <span class="font-orbitron font-bold text-white text-sm sm:text-base">PLANILLA</span>
+                <p class="text-[10px] text-cyber-cyan flex items-center gap-1">
+                    <span id="syncDot" class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                    <span id="syncStatus">Listo</span>
+                </p>
+            </div>
+        </div>
+        <div class="flex items-center gap-2">
+            <a href="/admin" class="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-orbitron text-white border border-slate-700 flex items-center gap-1.5">
+                <i data-lucide="settings" class="w-3.5 h-3.5"></i> <span class="hidden sm:inline">Admin</span>
+            </a>
+            <button onclick="exportXLSX()" class="px-3 py-2 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-xs font-orbitron text-emerald-400 border border-emerald-500/30 flex items-center gap-1.5">
+                <i data-lucide="file-spreadsheet" class="w-3.5 h-3.5"></i> <span class="hidden sm:inline">Excel</span>
+            </button>
+            <button onclick="logout()" class="px-3 py-2 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-xs font-orbitron text-rose-400 border border-rose-500/30 flex items-center gap-1.5">
+                <i data-lucide="log-out" class="w-3.5 h-3.5"></i> <span class="hidden sm:inline">Salir</span>
+            </button>
+        </div>
+    </div>
+
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex gap-2 border-t border-slate-900 overflow-x-auto">
+        <button onclick="switchTab('pedidos')" id="tab-pedidos" class="tab-btn active px-4 py-3 font-orbitron text-sm font-bold whitespace-nowrap flex items-center gap-2">
+            <i data-lucide="shopping-cart" class="w-4 h-4"></i> Pedidos <span id="pedidosBadge" class="tab-badge hidden">0</span>
+        </button>
+        <button onclick="switchTab('clientes')" id="tab-clientes" class="tab-btn px-4 py-3 font-orbitron text-sm font-bold whitespace-nowrap flex items-center gap-2">
+            <i data-lucide="users" class="w-4 h-4"></i> Clientes
+        </button>
+        <button onclick="switchTab('recargas')" id="tab-recargas" class="tab-btn px-4 py-3 font-orbitron text-sm font-bold whitespace-nowrap flex items-center gap-2">
+            <i data-lucide="clipboard-list" class="w-4 h-4"></i> Recargas
+        </button>
+        <button onclick="switchTab('listas')" id="tab-listas" class="tab-btn px-4 py-3 font-orbitron text-sm font-bold whitespace-nowrap flex items-center gap-2">
+            <i data-lucide="list" class="w-4 h-4"></i> Listas
+        </button>
+    </div>
+</header>
+
+<main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+
+    <!-- ============ TAB PEDIDOS ============ -->
+    <section id="panel-pedidos" class="space-y-4">
+        <div class="flex items-center justify-between flex-wrap gap-3">
+            <div>
+                <h2 class="font-orbitron text-xl font-bold text-white">Pedidos de la Tienda</h2>
+                <p class="text-xs text-gray-400">Verifica, rechaza o marca completado cada pedido.</p>
+            </div>
+            <div class="flex items-center gap-2">
+                <select id="ordersFilter" onchange="loadOrders()" class="input-field text-xs py-2 w-36">
+                    <option value="">Todos</option>
+                    <option value="pending" selected>Pendientes</option>
+                    <option value="verified">Verificados</option>
+                    <option value="completed">Completados</option>
+                    <option value="rejected">Rechazados</option>
+                </select>
+                <button onclick="loadOrders()" class="px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white text-xs font-orbitron font-bold flex items-center gap-1.5">
+                    <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Recargar
+                </button>
+            </div>
+        </div>
+        <div id="ordersList" class="space-y-3"></div>
+        <div id="ordersEmpty" class="hidden glass-card rounded-2xl p-8 text-center text-gray-400">
+            <i data-lucide="shopping-bag" class="w-10 h-10 mx-auto mb-2 opacity-50"></i>
+            <p class="text-sm">No hay pedidos con este filtro.</p>
+        </div>
+    </section>
+
+    <!-- ============ TAB CLIENTES ============ -->
+    <section id="panel-clientes" class="hidden space-y-4">
+        <div class="flex items-center justify-between flex-wrap gap-2">
+            <div>
+                <h2 class="font-orbitron text-xl font-bold text-white">Clientes</h2>
+                <p class="text-xs text-gray-400">Registrar clientes para que puedan comprar en la tienda.</p>
+            </div>
+            <div class="flex items-center gap-2">
+                <input type="search" id="clientSearch" oninput="renderClients()" placeholder="Buscar..." class="input-field text-xs py-2 w-40">
+                <button onclick="openClientModal()" class="px-3 py-2 rounded-xl bg-cyber-cyan text-black font-orbitron font-bold text-xs flex items-center gap-1.5">
+                    <i data-lucide="user-plus" class="w-4 h-4"></i> Nuevo
+                </button>
+            </div>
+        </div>
+        <div id="clientsList" class="space-y-2"></div>
+        <div id="clientsEmpty" class="hidden glass-card rounded-2xl p-8 text-center text-gray-400">
+            <i data-lucide="users" class="w-10 h-10 mx-auto mb-2 opacity-50"></i>
+            <p class="text-sm">No hay clientes registrados.</p>
+        </div>
+    </section>
+
+    <!-- ============ TAB RECARGAS ============ -->
+    <section id="panel-recargas" class="hidden space-y-4">
+        <div class="flex flex-wrap items-center gap-2">
+            <button onclick="changeDay(-1)" class="w-10 h-10 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center"><i data-lucide="chevron-left" class="w-4 h-4 text-gray-300"></i></button>
+            <input type="date" id="datePicker" class="input-field flex-1 min-w-[140px] font-mono text-sm py-2">
+            <button onclick="changeDay(1)" class="w-10 h-10 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center"><i data-lucide="chevron-right" class="w-4 h-4 text-gray-300"></i></button>
+            <button onclick="goToday()" class="px-3 py-2 rounded-lg bg-cyber-cyan/10 border border-cyber-cyan/30 text-cyber-cyan text-xs font-orbitron font-bold">HOY</button>
+        </div>
+
+        <div class="grid grid-cols-3 gap-2">
+            <div class="glass-card rounded-xl p-3 text-center"><div class="text-[10px] text-gray-400 font-orbitron uppercase">Recargas</div><div id="sumCount" class="font-orbitron text-xl font-black text-cyber-cyan">0</div></div>
+            <div class="glass-card rounded-xl p-3 text-center"><div class="text-[10px] text-gray-400 font-orbitron uppercase">Total Bs.</div><div id="sumTotal" class="font-orbitron text-xl font-black text-emerald-400">0</div></div>
+            <div class="glass-card rounded-xl p-3 text-center"><div class="text-[10px] text-gray-400 font-orbitron uppercase">Promedio</div><div id="sumAvg" class="font-orbitron text-xl font-black text-cyber-magenta">0</div></div>
+        </div>
+
+        <div class="glass-card rounded-2xl p-4 space-y-3">
+            <h2 class="font-orbitron font-bold text-white text-sm flex items-center gap-2"><i data-lucide="plus-circle" class="w-4 h-4 text-cyber-cyan"></i> Nueva Recarga Manual</h2>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-[10px] font-orbitron font-bold text-gray-300 uppercase mb-1">N° Teléfono</label>
+                    <input type="tel" id="fTel" class="input-field font-mono" placeholder="04141234567" inputmode="tel">
+                </div>
+                <div>
+                    <label class="block text-[10px] font-orbitron font-bold text-gray-300 uppercase mb-1">Nombre del cliente</label>
+                    <input type="text" id="fNombre" class="input-field">
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-[10px] font-orbitron font-bold text-gray-300 uppercase mb-1">Juego</label>
+                    <select id="fJuego" class="input-field">
+                        <option value="">— Selecciona —</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-[10px] font-orbitron font-bold text-gray-300 uppercase mb-1">Recarga (cantidad)</label>
+                    <input type="text" id="fRecarga" class="input-field" placeholder="Ej: 500 diamantes">
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-[10px] font-orbitron font-bold text-gray-300 uppercase mb-1">ID / Usuario</label>
+                    <input type="text" id="fIdUsuario" class="input-field font-mono">
+                </div>
+                <div>
+                    <label class="block text-[10px] font-orbitron font-bold text-gray-300 uppercase mb-1">Referencia</label>
+                    <input type="text" id="fReferencia" class="input-field font-mono">
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-[10px] font-orbitron font-bold text-gray-300 uppercase mb-1">Banco</label>
+                    <select id="fBanco" class="input-field">
+                        <option value="">— Selecciona —</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-[10px] font-orbitron font-bold text-gray-300 uppercase mb-1">Monto (Bs.)</label>
+                    <input type="text" id="fMonto" class="input-field font-mono text-lg" inputmode="decimal">
+                </div>
+            </div>
+
+            <div class="flex gap-2">
+                <button onclick="saveRecord()" id="saveBtn" class="flex-1 py-3 rounded-xl font-orbitron font-bold text-black bg-gradient-to-r from-cyber-cyan to-blue-400 flex items-center justify-center gap-2">
+                    <i data-lucide="save" class="w-5 h-5"></i><span id="saveBtnText">GUARDAR</span>
+                </button>
+                <button onclick="clearForm()" id="cancelBtn" class="hidden px-5 py-3 rounded-xl font-orbitron font-bold text-gray-300 bg-slate-800 border border-slate-700">Cancelar</button>
+            </div>
+        </div>
+
+        <div class="flex items-center justify-between gap-2">
+            <h2 class="font-orbitron font-bold text-white text-sm">Registros del día</h2>
+            <input type="search" id="searchBox" oninput="renderRecords()" placeholder="Buscar..." class="input-field py-2 text-xs w-40">
+        </div>
+
+        <div class="glass-card rounded-2xl overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead class="bg-black/40">
+                        <tr class="text-left text-[11px] font-orbitron uppercase text-gray-400">
+                            <th class="px-3 py-3">#</th>
+                            <th class="px-3 py-3">Nombre</th>
+                            <th class="px-3 py-3 hidden sm:table-cell">Teléfono</th>
+                            <th class="px-3 py-3">Juego</th>
+                            <th class="px-3 py-3 hidden md:table-cell">Recarga</th>
+                            <th class="px-3 py-3 hidden md:table-cell">ID</th>
+                            <th class="px-3 py-3 hidden lg:table-cell">Ref.</th>
+                            <th class="px-3 py-3 hidden lg:table-cell">Banco</th>
+                            <th class="px-3 py-3 text-right">Monto Bs.</th>
+                            <th class="px-3 py-3 w-20 text-center">Acc.</th>
+                        </tr>
+                    </thead>
+                    <tbody id="recordsTbody"></tbody>
+                </table>
+            </div>
+        </div>
+        <div id="emptyState" class="hidden glass-card rounded-2xl p-8 text-center text-gray-400">
+            <i data-lucide="inbox" class="w-10 h-10 mx-auto mb-2 opacity-50"></i>
+            <p class="text-sm">No hay registros para este día.</p>
+        </div>
+
+        <div class="glass-card rounded-2xl p-4">
+            <div class="flex justify-between items-center">
+                <span class="font-orbitron text-xs text-gray-400 uppercase">TOTAL DEL DÍA</span>
+                <span id="footerTotal" class="font-orbitron text-2xl font-black text-cyber-cyan">Bs. 0</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- ============ TAB LISTAS ============ -->
+    <section id="panel-listas" class="hidden space-y-4">
+        <div>
+            <h2 class="font-orbitron text-xl font-bold text-white">Listas Desplegables</h2>
+            <p class="text-xs text-gray-400">Bancos y juegos del formulario de recarga.</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="glass-card rounded-2xl p-4 space-y-3">
+                <div class="flex items-center justify-between">
+                    <h3 class="font-orbitron font-bold text-white text-sm flex items-center gap-2">
+                        <i data-lucide="landmark" class="w-4 h-4 text-cyber-cyan"></i> Bancos
+                    </h3>
+                    <span id="bancosCount" class="text-[10px] text-gray-500"></span>
+                </div>
+                <div id="bancosList" class="space-y-1.5 max-h-96 overflow-y-auto"></div>
+                <div class="flex gap-2 pt-2 border-t border-slate-800">
+                    <input type="text" id="newBanco" class="input-field text-sm flex-1" placeholder="Nuevo banco...">
+                    <button onclick="addBanco()" class="px-3 py-2 rounded-lg bg-cyber-cyan text-black font-orbitron font-bold text-xs"><i data-lucide="plus" class="w-3.5 h-3.5"></i></button>
+                </div>
+            </div>
+
+            <div class="glass-card rounded-2xl p-4 space-y-3">
+                <div class="flex items-center justify-between">
+                    <h3 class="font-orbitron font-bold text-white text-sm flex items-center gap-2">
+                        <i data-lucide="gamepad-2" class="w-4 h-4 text-cyber-magenta"></i> Juegos
+                    </h3>
+                    <span id="juegosCount" class="text-[10px] text-gray-500"></span>
+                </div>
+                <div id="juegosList" class="space-y-1.5 max-h-96 overflow-y-auto"></div>
+                <div class="flex gap-2 pt-2 border-t border-slate-800">
+                    <input type="text" id="newJuego" class="input-field text-sm flex-1" placeholder="Nuevo juego...">
+                    <button onclick="addJuego()" class="px-3 py-2 rounded-lg bg-cyber-magenta text-white font-orbitron font-bold text-xs"><i data-lucide="plus" class="w-3.5 h-3.5"></i></button>
+                </div>
+            </div>
+        </div>
+
+        <button onclick="saveLists()" class="w-full py-3 rounded-xl font-orbitron font-bold text-black bg-gradient-to-r from-cyber-cyan to-blue-400 flex items-center justify-center gap-2">
+            <i data-lucide="save" class="w-5 h-5"></i> GUARDAR LISTAS
+        </button>
+    </section>
+</main>
+</div>
+
+<!-- MODAL CLIENTE -->
+<div id="clientModal" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
+<div class="glass-card w-full max-w-md rounded-3xl border border-cyber-cyan/40 overflow-hidden my-8">
+    <div class="p-4 border-b border-slate-800 flex items-center justify-between bg-gradient-to-r from-cyber-card to-slate-900">
+        <h3 id="clientModalTitle" class="font-orbitron font-bold text-white">Registrar Cliente</h3>
+        <button onclick="closeClientModal()" class="w-8 h-8 rounded-full bg-slate-800 text-gray-400 flex items-center justify-center"><i data-lucide="x" class="w-5 h-5"></i></button>
+    </div>
+    <div class="p-5 space-y-3 max-h-[75vh] overflow-y-auto">
+        <div><label class="block text-[10px] font-orbitron font-bold text-gray-300 uppercase mb-1">Teléfono</label><input type="tel" id="cm-phone" class="input-field font-mono" placeholder="04141234567"></div>
+        <div class="grid grid-cols-2 gap-3">
+            <div><label class="block text-[10px] font-orbitron font-bold text-gray-300 uppercase mb-1">Nombre</label><input type="text" id="cm-firstName" class="input-field"></div>
+            <div><label class="block text-[10px] font-orbitron font-bold text-gray-300 uppercase mb-1">Apellido</label><input type="text" id="cm-lastName" class="input-field"></div>
+        </div>
+        <div><label class="block text-[10px] font-orbitron font-bold text-gray-300 uppercase mb-1">Cédula (opcional)</label><input type="text" id="cm-cedula" class="input-field font-mono"></div>
+        <div><label class="block text-[10px] font-orbitron font-bold text-gray-300 uppercase mb-1">Notas (opcional)</label><input type="text" id="cm-notes" class="input-field"></div>
+        <div class="flex gap-2 pt-2">
+            <button onclick="saveClient()" class="flex-1 py-3 rounded-xl font-orbitron font-bold text-black bg-gradient-to-r from-cyber-cyan to-blue-400">GUARDAR</button>
+            <button onclick="deleteClient()" id="deleteClientBtn" class="hidden px-4 py-3 rounded-xl bg-rose-500/10 text-rose-400 border border-rose-500/30"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+        </div>
+    </div>
+</div>
+</div>
+
+<!-- MODAL IMAGEN -->
+<div id="imgModal" class="fixed inset-0 z-[100] hidden bg-black/90 backdrop-blur-md items-center justify-center p-4" onclick="closeImgModal()">
+    <img id="imgModalSrc" class="max-w-full max-h-[90vh] rounded-2xl border border-cyber-cyan/40">
+</div>
+
+<div id="toast" class="fixed bottom-6 right-6 z-[200] hidden">
+    <div class="glass-card px-5 py-3 rounded-xl border border-cyber-cyan/40 flex items-center gap-3">
+        <i data-lucide="check-circle" class="w-5 h-5 text-emerald-400"></i>
+        <span id="toastText" class="text-sm text-white">Guardado</span>
+    </div>
+</div>
+
+<script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+<script src="/js/planilla.js"></script>
+</body>
+</html>
