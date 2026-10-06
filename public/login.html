@@ -99,7 +99,7 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
             document.getElementById('loginErrorText').innerText = data.error || 'Error';
             return;
         }
-        const next = new URLSearchParams(location.search).get('next') || 'admin.html';
+        const next = new URLSearchParams(location.search).get('next') || 'admin';
         location.replace(next);
     } catch (err) {
         errDiv.classList.remove('hidden');
