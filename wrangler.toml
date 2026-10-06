@@ -1,6 +1,0 @@
-name = "x-store"
-compatibility_date = "2026-10-06"
-
-[assets]
-directory = "./public"
-not_found_handling = "404-page"
