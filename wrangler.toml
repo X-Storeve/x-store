@@ -1,18 +1,6 @@
 name = "x-store"
-main = "src/worker.js"
 compatibility_date = "2026-10-06"
 
 [assets]
 directory = "./public"
-binding = "ASSETS"
-
-[[kv_namespaces]]
-binding = "XSTORE_KV"
-id = "5d74aa1ce71c4a32ae4ef7e800c4bae9"
-
-[[r2_buckets]]
-binding = "XSTORE_R2"
-bucket_name = "xstore-captures"
-
-[vars]
-WHATSAPP_NUMBER = "584165570405"
+not_found_handling = "404-page"
