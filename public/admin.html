@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>X-Store | Panel de Administración</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="icon" href="/logo.png">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Orbitron:wght@600;700;800;900&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@latest"></script>
+<script>
+tailwind.config = { theme: { extend: {
+    colors: { cyber: { bg:'#09090e', card:'#12121e', cyan:'#00f2ff', magenta:'#e000ff' } },
+    fontFamily: { orbitron:['Orbitron','sans-serif'], sans:['Inter','sans-serif'] }
+}}};
+</script>
+<style>
+body { background:#09090e; color:#f8fafc;
+    background-image: radial-gradient(circle at 15% 15%, rgba(0,242,255,0.05) 0%, transparent 40%),
+                      radial-gradient(circle at 85% 85%, rgba(224,0,255,0.05) 0%, transparent 40%);
+    background-attachment: fixed; }
+.glass-card { background: rgba(18,18,30,0.75); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.08); }
+.input-field { width:100%; background:rgba(0,0,0,0.5); border:1px solid #334155; border-radius:.75rem; padding:.75rem 1rem; font-size:.875rem; color:#fff; }
+.input-field:focus { outline:none; border-color:#00f2ff; box-shadow:0 0 0 1px #00f2ff; }
+.loading-overlay { position:fixed; inset:0; z-index:999; background:rgba(9,9,14,.9); display:flex; align-items:center; justify-content:center; }
+.spinner { width:48px; height:48px; border:4px solid rgba(0,242,255,.2); border-top-color:#00f2ff; border-radius:50%; animation: spin 1s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+::-webkit-scrollbar { width:8px; } ::-webkit-scrollbar-thumb { background:#1e1e2e; border-radius:4px; }
+.list-item { display:flex; align-items:center; gap:8px; padding:8px 12px; background:rgba(0,0,0,.4); border:1px solid #1e293b; border-radius:12px; }
+.list-item input { flex:1; background:transparent; border:none; color:#fff; font-size:.875rem; }
+.list-item input:focus { outline:none; }
+.mini-btn { width:32px; height:32px; border-radius:8px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+</style>
+</head>
+<body class="font-sans antialiased min-h-screen">
+
+<div id="loadingOverlay" class="loading-overlay">
+    <div class="text-center">
+        <div class="spinner mx-auto"></div>
+        <p id="loadingText" class="text-cyber-cyan font-orbitron text-sm mt-4">Verificando sesión...</p>
+    </div>
+</div>
+
+<div id="adminApp" class="hidden">
+<header class="sticky top-0 z-40 bg-[#09090e]/95 backdrop-blur-md border-b border-cyan-500/20">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+        <div class="flex items-center gap-3">
+            <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-cyber-cyan to-cyber-magenta flex items-center justify-center font-orbitron font-black text-black">X</div>
+            <div>
+                <span class="font-orbitron font-bold text-white text-sm sm:text-base">ADMINISTRACIÓN</span>
+                <p class="text-[10px] text-cyber-cyan flex items-center gap-1">
+                    <span id="syncDot" class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                    <span id="syncStatus">Listo</span>
+                </p>
+            </div>
+        </div>
+        <div class="flex items-center gap-2">
+            <a href="/planilla.html" class="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-orbitron text-white border border-slate-700 flex items-center gap-1.5">
+                <i data-lucide="clipboard-list" class="w-3.5 h-3.5"></i> <span class="hidden sm:inline">Planilla</span>
+            </a>
+            <a href="/" target="_blank" class="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-orbitron text-white border border-slate-700 flex items-center gap-1.5">
+                <i data-lucide="eye" class="w-3.5 h-3.5"></i> <span class="hidden sm:inline">Tienda</span>
+            </a>
+            <button onclick="toggleMaintenance()" id="maintenanceBtn" class="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-orbitron text-white border border-slate-700 flex items-center gap-1.5">
+                <i data-lucide="wrench" class="w-3.5 h-3.5"></i> <span id="maintenanceBtnText" class="hidden sm:inline">Mantenimiento</span>
+            </button>
+            <button onclick="logout()" class="px-3 py-2 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-xs font-orbitron text-rose-400 border border-rose-500/30 flex items-center gap-1.5">
+                <i data-lucide="log-out" class="w-3.5 h-3.5"></i> <span class="hidden sm:inline">Salir</span>
+            </button>
+        </div>
+    </div>
+</header>
+
+<main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+    <div class="flex gap-2 border-b border-slate-800 overflow-x-auto">
+        <button onclick="switchTab('games')" id="tab-games" class="tab-btn px-4 py-3 font-orbitron text-sm font-bold text-cyber-cyan border-b-2 border-cyber-cyan whitespace-nowrap flex items-center gap-2">
+            <i data-lucide="gamepad-2" class="w-4 h-4"></i> Juegos
+        </button>
+        <button onclick="switchTab('payments')" id="tab-payments" class="tab-btn px-4 py-3 font-orbitron text-sm font-bold text-gray-400 hover:text-white whitespace-nowrap flex items-center gap-2">
+            <i data-lucide="credit-card" class="w-4 h-4"></i> Pagos
+        </button>
+        <button onclick="switchTab('lists')" id="tab-lists" class="tab-btn px-4 py-3 font-orbitron text-sm font-bold text-gray-400 hover:text-white whitespace-nowrap flex items-center gap-2">
+            <i data-lucide="list" class="w-4 h-4"></i> Listas
+        </button>
+        <button onclick="switchTab('hero')" id="tab-hero" class="tab-btn px-4 py-3 font-orbitron text-sm font-bold text-gray-400 hover:text-white whitespace-nowrap flex items-center gap-2">
+            <i data-lucide="sparkles" class="w-4 h-4"></i> Hero
+        </button>
+        <button onclick="switchTab('backup')" id="tab-backup" class="tab-btn px-4 py-3 font-orbitron text-sm font-bold text-gray-400 hover:text-white whitespace-nowrap flex items-center gap-2">
+            <i data-lucide="database" class="w-4 h-4"></i> Respaldo
+        </button>
+    </div>
+
+    <section id="panel-games" class="space-y-6">
+        <div class="flex items-center justify-between flex-wrap gap-3">
+            <div>
+                <h2 class="font-orbitron text-xl font-bold text-white">Gestión de Juegos</h2>
+                <p class="text-xs text-gray-400">Edita precios, paquetes, ofertas y configuración de ID.</p>
+            </div>
+            <div class="flex gap-2">
+                <button onclick="reloadFromServer()" class="px-4 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white font-orbitron font-bold text-sm hover:border-cyber-cyan flex items-center gap-2">
+                    <i data-lucide="refresh-cw" class="w-4 h-4"></i> Recargar
+                </button>
+                <button onclick="openGameModal()" class="px-4 py-2.5 rounded-xl bg-cyber-cyan text-black font-orbitron font-bold text-sm flex items-center gap-2">
+                    <i data-lucide="plus" class="w-4 h-4"></i> Agregar
+                </button>
+            </div>
+        </div>
+        <div id="gamesAdminList" class="space-y-4"></div>
+    </section>
+
+    <section id="panel-payments" class="hidden space-y-6">
+        <div class="flex items-center justify-between flex-wrap gap-3">
+            <div>
+                <h2 class="font-orbitron text-xl font-bold text-white">Métodos de Pago</h2>
+                <p class="text-xs text-gray-400">Cada método incluye tasa, QR y datos de cobro editables.</p>
+            </div>
+            <button onclick="openPaymentModal()" class="px-4 py-2.5 rounded-xl bg-cyber-cyan text-black font-orbitron font-bold text-sm flex items-center gap-2">
+                <i data-lucide="plus" class="w-4 h-4"></i> Agregar Método
+            </button>
+        </div>
+        <div id="paymentsAdminList" class="space-y-3"></div>
+    </section>
+
+    <section id="panel-lists" class="hidden space-y-6">
+        <div>
+            <h2 class="font-orbitron text-xl font-bold text-white">Listas Desplegables</h2>
+            <p class="text-xs text-gray-400">Bancos y juegos que aparecen en los selectores.</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="glass-card rounded-2xl p-4 space-y-3">
+                <div class="flex items-center justify-between">
+                    <h3 class="font-orbitron font-bold text-white text-sm flex items-center gap-2">
+                        <i data-lucide="landmark" class="w-4 h-4 text-cyber-cyan"></i> Bancos
+                    </h3>
+                    <span id="adminBancosCount" class="text-[10px] text-gray-500"></span>
+                </div>
+                <div id="adminBancosList" class="space-y-1.5 max-h-96 overflow-y-auto"></div>
+                <div class="flex gap-2 pt-2 border-t border-slate-800">
+                    <input type="text" id="adminNewBanco" class="input-field text-sm flex-1" placeholder="Nuevo banco...">
+                    <button onclick="adminAddBanco()" class="px-3 py-2 rounded-lg bg-cyber-cyan text-black font-orbitron font-bold text-xs"><i data-lucide="plus" class="w-3.5 h-3.5"></i></button>
+                </div>
+            </div>
+
+            <div class="glass-card rounded-2xl p-4 space-y-3">
+                <div class="flex items-center justify-between">
+                    <h3 class="font-orbitron font-bold text-white text-sm flex items-center gap-2">
+                        <i data-lucide="gamepad-2" class="w-4 h-4 text-cyber-magenta"></i> Juegos
+                    </h3>
+                    <span id="adminJuegosCount" class="text-[10px] text-gray-500"></span>
+                </div>
+                <div id="adminJuegosList" class="space-y-1.5 max-h-96 overflow-y-auto"></div>
+                <div class="flex gap-2 pt-2 border-t border-slate-800">
+                    <input type="text" id="adminNewJuego" class="input-field text-sm flex-1" placeholder="Nuevo juego...">
+                    <button onclick="adminAddJuego()" class="px-3 py-2 rounded-lg bg-cyber-magenta text-white font-orbitron font-bold text-xs"><i data-lucide="plus" class="w-3.5 h-3.5"></i></button>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex gap-2 flex-wrap">
+            <button onclick="saveListsAdmin()" class="flex-1 py-3 rounded-xl font-orbitron font-bold text-black bg-gradient-to-r from-cyber-cyan to-blue-400 flex items-center justify-center gap-2">
+                <i data-lucide="save" class="w-5 h-5"></i> GUARDAR LISTAS
+            </button>
+            <button onclick="reloadListsAdmin()" class="px-5 py-3 rounded-xl font-orbitron font-bold text-white bg-slate-800 border border-slate-700 flex items-center gap-2">
+                <i data-lucide="refresh-cw" class="w-4 h-4"></i> Recargar
+            </button>
+        </div>
+    </section>
+
+    <section id="panel-hero" class="hidden space-y-6">
+        <div class="flex items-center justify-between flex-wrap gap-3">
+            <div>
+                <h2 class="font-orbitron text-xl font-bold text-white">Tarjetas del Hero</h2>
+                <p class="text-xs text-gray-400">4 tarjetas decorativas de la portada.</p>
+            </div>
+            <button onclick="saveHero()" id="saveHeroBtn" class="px-4 py-2.5 rounded-xl bg-cyber-cyan text-black font-orbitron font-bold text-sm flex items-center gap-2">
+                <i data-lucide="save" class="w-4 h-4"></i> Guardar
+            </button>
+        </div>
+        <div id="heroAdminList" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+    </section>
+
+    <section id="panel-backup" class="hidden space-y-6 max-w-2xl">
+        <h2 class="font-orbitron text-xl font-bold text-white">Respaldo y Restauración</h2>
+        <div class="glass-card rounded-2xl p-6 space-y-4">
+            <button onclick="exportConfig()" class="w-full py-3 rounded-xl font-orbitron font-bold text-black bg-gradient-to-r from-emerald-400 to-emerald-500 flex items-center justify-center gap-2">
+                <i data-lucide="download" class="w-5 h-5"></i> EXPORTAR (.json)
+            </button>
+            <div>
+                <label class="block text-xs font-orbitron font-bold text-gray-300 uppercase mb-2">Importar</label>
+                <input type="file" id="importFile" accept=".json" class="input-field">
+            </div>
+            <button onclick="importConfig()" class="w-full py-3 rounded-xl font-orbitron font-bold text-white bg-slate-800 border border-slate-700 flex items-center justify-center gap-2">
+                <i data-lucide="upload" class="w-5 h-5"></i> IMPORTAR
+            </button>
+        </div>
+    </section>
+</main>
+</div>
+
+<!-- MODAL JUEGO -->
+<div id="gameModal" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
+<div class="glass-card w-full max-w-3xl rounded-3xl border border-cyber-cyan/40 overflow-hidden my-8">
+    <div class="p-5 border-b border-slate-800 flex items-center justify-between bg-gradient-to-r from-cyber-card to-slate-900">
+        <h3 id="gameModalTitle" class="font-orbitron font-bold text-lg text-white">Editar Juego</h3>
+        <button onclick="closeGameModal()" class="w-8 h-8 rounded-full bg-slate-800 text-gray-400 flex items-center justify-center"><i data-lucide="x" class="w-5 h-5"></i></button>
+    </div>
+    <div class="p-6 space-y-5 max-h-[75vh] overflow-y-auto">
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div><label class="block text-xs font-orbitron font-bold text-gray-300 uppercase mb-2">Clave</label><input type="text" id="gm-key" class="input-field font-mono" readonly></div>
+            <div><label class="block text-xs font-orbitron font-bold text-gray-300 uppercase mb-2">Nombre</label><input type="text" id="gm-title" class="input-field"></div>
+            <div><label class="block text-xs font-orbitron font-bold text-gray-300 uppercase mb-2">Ícono</label><input type="text" id="gm-icon" class="input-field" maxlength="4"></div>
+            <div class="sm:col-span-3"><label class="block text-xs font-orbitron font-bold text-gray-300 uppercase mb-2">URL logo</label><input type="url" id="gm-logo" class="input-field font-mono"></div>
+            <div><label class="block text-xs font-orbitron font-bold text-gray-300 uppercase mb-2">Oferta %</label><input type="number" id="gm-discount" class="input-field font-mono" value="0" min="0" max="99"></div>
+            <div class="sm:col-span-2"><label class="block text-xs font-orbitron font-bold text-gray-300 uppercase mb-2">URL portada</label><input type="url" id="gm-cover" class="input-field font-mono"></div>
+            <div class="sm:col-span-3"><label class="block text-xs font-orbitron font-bold text-gray-300 uppercase mb-2">Descripción</label><input type="text" id="gm-desc" class="input-field"></div>
+            <div class="sm:col-span-3"><label class="block text-xs font-orbitron font-bold text-gray-300 uppercase mb-2">Etiquetas</label><input type="text" id="gm-tags" class="input-field" placeholder="Popular, Oferta"></div>
+        </div>
+        <div class="pt-2 border-t border-slate-800">
+            <label class="flex items-center justify-between gap-3 cursor-pointer p-3 rounded-xl bg-black/40 border border-slate-800 mb-3">
+                <div><p class="text-sm font-bold text-white">Solicitar ID</p></div>
+                <div class="relative">
+                    <input type="checkbox" id="gm-idEnabled" class="sr-only peer" checked>
+                    <div class="w-11 h-6 bg-slate-700 peer-checked:bg-cyber-cyan rounded-full transition-colors after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-5"></div>
+                </div>
+            </label>
+            <div id="gm-idOptions" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div class="sm:col-span-2">
+                    <label class="block text-xs font-orbitron font-bold text-gray-300 uppercase mb-2">Modo ID</label>
+                    <select id="gm-idMode" class="input-field">
+                        <option value="id">Solo ID</option>
+                        <option value="id_server">ID + Server</option>
+                        <option value="no_id">Sin ID</option>
+                    </select>
+                </div>
+                <div id="gm-minIdWrap"><label class="block text-xs font-orbitron font-bold text-gray-300 uppercase mb-2">Longitud mínima</label><input type="number" id="gm-minId" class="input-field font-mono" value="8" min="1" max="30"></div>
+            </div>
+        </div>
+        <div class="pt-2 border-t border-slate-800">
+            <div class="flex items-center justify-between mb-3">
+                <label class="block text-xs font-orbitron font-bold text-gray-300 uppercase">Paquetes (USDT)</label>
+                <button onclick="addPackageRow()" class="px-3 py-1.5 rounded-lg bg-cyber-cyan/10 text-cyber-cyan border border-cyber-cyan/30 font-orbitron text-xs font-bold flex items-center gap-1"><i data-lucide="plus" class="w-3 h-3"></i> Añadir</button>
+            </div>
+            <div id="packagesContainer" class="space-y-2"></div>
+        </div>
+        <div class="flex gap-2 pt-2">
+            <button onclick="saveGame()" id="saveGameBtn" class="flex-1 py-3 rounded-xl font-orbitron font-bold text-black bg-gradient-to-r from-cyber-cyan to-blue-400">GUARDAR</button>
+            <button onclick="deleteGame()" id="deleteGameBtn" class="hidden px-5 py-3 rounded-xl font-orbitron font-bold text-rose-400 bg-rose-500/10 border border-rose-500/30"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+        </div>
+    </div>
+</div>
+</div>
+
+<!-- MODAL PAGO -->
+<div id="paymentModal" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
+<div class="glass-card w-full max-w-2xl rounded-3xl border border-cyber-cyan/40 overflow-hidden my-8">
+    <div class="p-5 border-b border-slate-800 flex items-center justify-between bg-gradient-to-r from-cyber-card to-slate-900">
+        <h3 id="paymentModalTitle" class="font-orbitron font-bold text-lg text-white">Método de Pago</h3>
+        <button onclick="closePaymentModal()" class="w-8 h-8 rounded-full bg-slate-800 text-gray-400 flex items-center justify-center"><i data-lucide="x" class="w-5 h-5"></i></button>
+    </div>
+    <div class="p-6 space-y-4 max-h-[75vh] overflow-y-auto">
+        <div class="grid grid-cols-2 gap-4">
+            <div><label class="block text-xs font-orbitron font-bold text-gray-300 uppercase mb-2">Nombre</label><input type="text" id="pm-name" class="input-field"></div>
+            <div><label class="block text-xs font-orbitron font-bold text-gray-300 uppercase mb-2">Ícono</label><input type="text" id="pm-icon" class="input-field" maxlength="4"></div>
+            <div><label class="block text-xs font-orbitron font-bold text-gray-300 uppercase mb-2">Código moneda</label><input type="text" id="pm-code" class="input-field font-mono"></div>
+            <div><label class="block text-xs font-orbitron font-bold text-gray-300 uppercase mb-2">Etiqueta</label><input type="text" id="pm-label" class="input-field font-mono"></div>
+            <div><label class="block text-xs font-orbitron font-bold text-gray-300 uppercase mb-2">Símbolo</label><input type="text" id="pm-symbol" class="input-field font-mono"></div>
+            <div><label class="block text-xs font-orbitron font-bold text-gray-300 uppercase mb-2">Decimales</label><input type="number" id="pm-decimals" class="input-field font-mono" value="2" min="0" max="4"></div>
+            <div class="col-span-2"><label class="block text-xs font-orbitron font-bold text-gray-300 uppercase mb-2">Tasa (por 1 USDT)</label><input type="number" id="pm-rate" class="input-field font-mono" step="0.01" min="0.01" value="1"></div>
+        </div>
+
+        <div class="pt-3 border-t border-slate-800">
+            <label class="block text-xs font-orbitron font-bold text-cyber-cyan uppercase mb-2">QR del método (opcional)</label>
+            <div class="flex flex-col sm:flex-row gap-3">
+                <div class="flex-1 space-y-2">
+                    <input type="url" id="pm-qr-url" class="input-field font-mono text-xs" placeholder="https://... (URL de la imagen QR)">
+                    <div class="flex gap-2">
+                        <input type="file" id="pm-qr-file" accept="image/*" class="input-field text-xs">
+                        <button onclick="removeQr()" class="px-3 py-2 rounded-lg bg-rose-500/10 text-rose-400 border border-rose-500/30 text-xs font-orbitron font-bold whitespace-nowrap">Quitar</button>
+                    </div>
+                </div>
+                <div class="w-32 h-32 rounded-xl border border-slate-700 bg-black/40 flex items-center justify-center overflow-hidden shrink-0 mx-auto sm:mx-0">
+                    <img id="pm-qr-preview" class="w-full h-full object-contain hidden">
+                    <span id="pm-qr-empty" class="text-[10px] text-gray-500 text-center px-2">Sin QR</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="pt-3 border-t border-slate-800">
+            <div class="flex items-center justify-between mb-3">
+                <label class="block text-xs font-orbitron font-bold text-cyber-cyan uppercase">Datos de cobro</label>
+                <button onclick="addFieldRow()" class="px-3 py-1.5 rounded-lg bg-cyber-cyan/10 text-cyber-cyan border border-cyber-cyan/30 font-orbitron text-xs font-bold flex items-center gap-1"><i data-lucide="plus" class="w-3 h-3"></i> Añadir campo</button>
+            </div>
+            <div id="fieldsContainer" class="space-y-2"></div>
+        </div>
+
+        <div class="pt-3 border-t border-slate-800 grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <label class="flex items-center gap-3 cursor-pointer p-3 rounded-xl bg-black/40 border border-slate-800">
+                <input type="checkbox" id="pm-askReference" class="w-5 h-5 accent-cyber-cyan" checked>
+                <span class="text-xs font-bold text-white">Pedir referencia</span>
+            </label>
+            <label class="flex items-center gap-3 cursor-pointer p-3 rounded-xl bg-black/40 border border-slate-800">
+                <input type="checkbox" id="pm-askBank" class="w-5 h-5 accent-cyber-cyan" checked>
+                <span class="text-xs font-bold text-white">Pedir banco emisor</span>
+            </label>
+            <label class="flex items-center gap-3 cursor-pointer p-3 rounded-xl bg-black/40 border border-slate-800">
+                <input type="checkbox" id="pm-askCapture" class="w-5 h-5 accent-cyber-cyan" checked>
+                <span class="text-xs font-bold text-white">Pedir captura</span>
+            </label>
+        </div>
+
+        <div class="flex items-center gap-3 p-3 rounded-xl bg-black/40 border border-slate-800">
+            <input type="checkbox" id="pm-enabled" class="w-5 h-5 accent-cyber-cyan" checked>
+            <span class="text-sm font-bold text-white">Método activo</span>
+        </div>
+
+        <div class="flex gap-2 pt-2">
+            <button onclick="savePayment()" class="flex-1 py-3 rounded-xl font-orbitron font-bold text-black bg-gradient-to-r from-cyber-cyan to-blue-400">GUARDAR</button>
+            <button onclick="deletePayment()" id="deletePaymentBtn" class="hidden px-5 py-3 rounded-xl font-orbitron font-bold text-rose-400 bg-rose-500/10 border border-rose-500/30"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+        </div>
+    </div>
+</div>
+</div>
+
+<div id="toast" class="fixed bottom-6 right-6 z-[100] hidden">
+    <div class="glass-card px-5 py-3 rounded-xl border border-cyber-cyan/40 flex items-center gap-3">
+        <i data-lucide="check-circle" class="w-5 h-5 text-emerald-400"></i>
+        <span id="toastText" class="text-sm text-white">Guardado</span>
+    </div>
+</div>
+
+<script src="/js/admin.js"></script>
+</body>
+</html>
