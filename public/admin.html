@@ -32,6 +32,10 @@ body { background:#09090e; color:#f8fafc;
 .list-item input { flex:1; background:transparent; border:none; color:#fff; font-size:.875rem; }
 .list-item input:focus { outline:none; }
 .mini-btn { width:32px; height:32px; border-radius:8px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.tab-btn { transition: all .2s; border-bottom:2px solid transparent; }
+.tab-btn.active { color: #00f2ff !important; border-bottom-color: #00f2ff !important; }
+.tab-btn:not(.active) { color: #94a3b8; }
+.tab-btn:hover:not(.active) { color: #fff; }
 </style>
 </head>
 <body class="font-sans antialiased min-h-screen">
@@ -57,7 +61,7 @@ body { background:#09090e; color:#f8fafc;
             </div>
         </div>
         <div class="flex items-center gap-2">
-            <a href="/planilla.html" class="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-orbitron text-white border border-slate-700 flex items-center gap-1.5">
+            <a href="/planilla" class="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-orbitron text-white border border-slate-700 flex items-center gap-1.5">
                 <i data-lucide="clipboard-list" class="w-3.5 h-3.5"></i> <span class="hidden sm:inline">Planilla</span>
             </a>
             <a href="/" target="_blank" class="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-orbitron text-white border border-slate-700 flex items-center gap-1.5">
@@ -75,19 +79,19 @@ body { background:#09090e; color:#f8fafc;
 
 <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
     <div class="flex gap-2 border-b border-slate-800 overflow-x-auto">
-        <button onclick="switchTab('games')" id="tab-games" class="tab-btn px-4 py-3 font-orbitron text-sm font-bold text-cyber-cyan border-b-2 border-cyber-cyan whitespace-nowrap flex items-center gap-2">
+        <button onclick="switchTab('games')" id="tab-games" class="tab-btn active px-4 py-3 font-orbitron text-sm font-bold whitespace-nowrap flex items-center gap-2">
             <i data-lucide="gamepad-2" class="w-4 h-4"></i> Juegos
         </button>
-        <button onclick="switchTab('payments')" id="tab-payments" class="tab-btn px-4 py-3 font-orbitron text-sm font-bold text-gray-400 hover:text-white whitespace-nowrap flex items-center gap-2">
+        <button onclick="switchTab('payments')" id="tab-payments" class="tab-btn px-4 py-3 font-orbitron text-sm font-bold whitespace-nowrap flex items-center gap-2">
             <i data-lucide="credit-card" class="w-4 h-4"></i> Pagos
         </button>
-        <button onclick="switchTab('lists')" id="tab-lists" class="tab-btn px-4 py-3 font-orbitron text-sm font-bold text-gray-400 hover:text-white whitespace-nowrap flex items-center gap-2">
+        <button onclick="switchTab('lists')" id="tab-lists" class="tab-btn px-4 py-3 font-orbitron text-sm font-bold whitespace-nowrap flex items-center gap-2">
             <i data-lucide="list" class="w-4 h-4"></i> Listas
         </button>
-        <button onclick="switchTab('hero')" id="tab-hero" class="tab-btn px-4 py-3 font-orbitron text-sm font-bold text-gray-400 hover:text-white whitespace-nowrap flex items-center gap-2">
+        <button onclick="switchTab('hero')" id="tab-hero" class="tab-btn px-4 py-3 font-orbitron text-sm font-bold whitespace-nowrap flex items-center gap-2">
             <i data-lucide="sparkles" class="w-4 h-4"></i> Hero
         </button>
-        <button onclick="switchTab('backup')" id="tab-backup" class="tab-btn px-4 py-3 font-orbitron text-sm font-bold text-gray-400 hover:text-white whitespace-nowrap flex items-center gap-2">
+        <button onclick="switchTab('backup')" id="tab-backup" class="tab-btn px-4 py-3 font-orbitron text-sm font-bold whitespace-nowrap flex items-center gap-2">
             <i data-lucide="database" class="w-4 h-4"></i> Respaldo
         </button>
     </div>
