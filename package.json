@@ -1,0 +1,13 @@
+﻿{
+  "name": "x-store",
+  "version": "1.0.0",
+  "private": true,
+  "description": "X-Store - Recargas de juegos y monedas virtuales",
+  "scripts": {
+    "dev": "wrangler pages dev public",
+    "deploy": "wrangler pages deploy public"
+  },
+  "devDependencies": {
+    "wrangler": "^3.90.0"
+  }
+}

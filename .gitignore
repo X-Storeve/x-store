@@ -1,0 +1,27 @@
+﻿# 🛒 X-Store
+
+Tienda de recargas de juegos y monedas virtuales.
+
+## Stack
+- Frontend: HTML + Tailwind CDN + JS vanilla
+- Backend: Cloudflare Pages Functions
+- Storage: KV + R2
+
+## Desarrollo local
+```bash
+npm install
+npm run dev# ==== ESTRUCTURA DE CARPETAS ====
+New-Item -ItemType Directory -Force -Path "public","public\css","public\js","public\icons","public\images\games","functions","functions\api","functions\api\captures","functions\api\admin","data",".github\workflows" | Out-Null
+
+# ==== .gitignore ====
+@'
+node_modules/
+.env
+.env.local
+.wrangler/
+dist/
+.DS_Store
+*.log
+.vscode/
+.idea/
+Thumbs.db
