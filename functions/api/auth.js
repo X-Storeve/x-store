@@ -30,8 +30,8 @@ export async function onRequestPost({ request, env }) {
     const { hash, salt } = await hashPassword(password);
     const admin = { username, passwordHash: hash, salt, createdAt: Date.now() };
     await env.XSTORE_KV.put('auth:admin', JSON.stringify(admin));
-    await createSessionCookie(username, env);
-    return json({ ok: true });
+    const token = await createSession(username, env);
+    return withSessionCookie({ ok: true }, token);
   }
 
   if (action === 'login') {
@@ -41,8 +41,8 @@ export async function onRequestPost({ request, env }) {
     if (username !== admin.username) return json({ error: 'Credenciales inválidas' }, 401);
     const ok = await verifyPassword(password, admin.salt, admin.passwordHash);
     if (!ok) return json({ error: 'Credenciales inválidas' }, 401);
-    await createSessionCookie(username, env);
-    return json({ ok: true });
+    const token = await createSession(username, env);
+    return withSessionCookie({ ok: true }, token);
   }
 
   if (action === 'logout') {
@@ -50,7 +50,7 @@ export async function onRequestPost({ request, env }) {
     const match = cookie.match(/xstore_session=([^;]+)/);
     if (match) await env.XSTORE_KV.delete(`session:${match[1]}`);
     const headers = new Headers({ 'Content-Type': 'application/json' });
-    headers.append('Set-Cookie', `xstore_session=; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=0`);
+    headers.append('Set-Cookie', 'xstore_session=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0');
     return new Response(JSON.stringify({ ok: true }), { status: 200, headers });
   }
 
@@ -88,13 +88,24 @@ function timingSafeEqual(a, b) {
   return r === 0;
 }
 
-async function createSessionCookie(username, env) {
-  const token = crypto.randomUUID().replace(/-/g, '');
+async function createSession(username, env) {
+  const token = crypto.randomUUID().replace(/-/g, '') + crypto.randomUUID().replace(/-/g, '');
   const exp = Date.now() + 7 * 24 * 60 * 60 * 1000;
-  await env.XSTORE_KV.put(`session:${token}`, JSON.stringify({ username, exp }), { expirationTtl: 7 * 24 * 60 * 60 });
+  await env.XSTORE_KV.put(
+    `session:${token}`,
+    JSON.stringify({ username, exp }),
+    { expirationTtl: 7 * 24 * 60 * 60 }
+  );
+  return token;
+}
+
+function withSessionCookie(data, token) {
   const headers = new Headers({ 'Content-Type': 'application/json' });
-  headers.append('Set-Cookie', `xstore_session=${token}; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=${7 * 24 * 60 * 60}`);
-  return new Response(JSON.stringify({ ok: true }), { status: 200, headers });
+  headers.append(
+    'Set-Cookie',
+    `xstore_session=${token}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${7 * 24 * 60 * 60}`
+  );
+  return new Response(JSON.stringify(data), { status: 200, headers });
 }
 
 async function getSession(request, env) {
