@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>X-Store | Acceso Operador</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="icon" href="/logo.png">
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Orbitron:wght@600;700;800;900&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@latest"></script>
+<script>
+tailwind.config = { theme: { extend: {
+    colors: { cyber: { bg:'#09090e', card:'#12121e', cyan:'#00f2ff', magenta:'#e000ff' } },
+    fontFamily: { orbitron:['Orbitron','sans-serif'], sans:['Inter','sans-serif'] }
+}}};
+</script>
+<style>
+body { background:#09090e; color:#f8fafc;
+    background-image: radial-gradient(circle at 15% 15%, rgba(0,242,255,0.05) 0%, transparent 40%),
+                      radial-gradient(circle at 85% 85%, rgba(224,0,255,0.05) 0%, transparent 40%);
+    background-attachment: fixed; }
+.glass-card { background: rgba(18,18,30,0.75); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.08); }
+.input-field { width:100%; background:rgba(0,0,0,0.5); border:1px solid #334155; border-radius:.75rem; padding:.75rem 1rem; font-size:.875rem; color:#fff; }
+.input-field:focus { outline:none; border-color:#00f2ff; box-shadow:0 0 0 1px #00f2ff; }
+</style>
+</head>
+<body class="font-sans antialiased min-h-screen flex items-center justify-center p-4">
+
+<div class="glass-card w-full max-w-md rounded-3xl p-8 border border-cyber-cyan/30 shadow-2xl">
+    <div class="text-center mb-6">
+        <div class="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-cyber-cyan/20 to-cyber-magenta/20 border border-cyber-cyan/40 flex items-center justify-center mb-4">
+            <i data-lucide="shield-check" class="w-8 h-8 text-cyber-cyan"></i>
+        </div>
+        <h1 class="font-orbitron text-2xl font-black text-white">ACCESO OPERADOR</h1>
+        <p id="subtitle" class="text-xs text-gray-400 mt-1">Inicia sesión para continuar</p>
+    </div>
+
+    <form id="loginForm" class="space-y-4">
+        <div>
+            <label class="block text-xs font-orbitron font-bold text-gray-300 uppercase mb-2">Usuario</label>
+            <input type="text" id="usernameInput" class="input-field font-mono" autocomplete="username" required>
+        </div>
+        <div>
+            <label class="block text-xs font-orbitron font-bold text-gray-300 uppercase mb-2">Contraseña</label>
+            <input type="password" id="passwordInput" class="input-field font-mono" autocomplete="current-password" required>
+        </div>
+        <div id="loginError" class="hidden text-xs text-rose-400 bg-rose-500/10 border border-rose-500/30 rounded-lg p-3 flex items-center gap-2">
+            <i data-lucide="alert-circle" class="w-4 h-4 shrink-0"></i>
+            <span id="loginErrorText">Error</span>
+        </div>
+        <button type="submit" id="loginBtn" class="w-full py-3.5 rounded-xl font-orbitron font-bold text-black bg-gradient-to-r from-cyber-cyan to-blue-400 hover:brightness-110 transition-all flex items-center justify-center gap-2">
+            <i data-lucide="log-in" class="w-5 h-5"></i>
+            <span id="loginBtnText">INGRESAR</span>
+        </button>
+    </form>
+</div>
+
+<script>
+const AUTH_URL = '/api/auth';
+let isFirstTime = false;
+
+document.addEventListener('DOMContentLoaded', async () => {
+    lucide.createIcons();
+    try {
+        const res = await fetch(`${AUTH_URL}?action=check`);
+        const data = await res.json();
+        if (data.loggedIn) {
+            const next = new URLSearchParams(location.search).get('next') || 'admin.html';
+            location.replace(next);
+            return;
+        }
+        if (!data.hasAdmin) {
+            isFirstTime = true;
+            document.getElementById('subtitle').innerText = 'Crea tu cuenta de administrador';
+            document.getElementById('loginBtnText').innerText = 'CREAR ADMIN';
+        }
+    } catch(e){}
+});
+
+document.getElementById('loginForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const u = document.getElementById('usernameInput').value.trim();
+    const p = document.getElementById('passwordInput').value;
+    const btn = document.getElementById('loginBtn');
+    const errDiv = document.getElementById('loginError');
+    errDiv.classList.add('hidden');
+    btn.disabled = true;
+    try {
+        const action = isFirstTime ? 'register' : 'login';
+        const res = await fetch(`${AUTH_URL}?action=${action}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: u, password: p })
+        });
+        const data = await res.json();
+        if (!res.ok) {
+            errDiv.classList.remove('hidden');
+            document.getElementById('loginErrorText').innerText = data.error || 'Error';
+            return;
+        }
+        const next = new URLSearchParams(location.search).get('next') || 'admin.html';
+        location.replace(next);
+    } catch (err) {
+        errDiv.classList.remove('hidden');
+        document.getElementById('loginErrorText').innerText = 'Error de conexión';
+    } finally { btn.disabled = false; }
+});
+</script>
+</body>
+</html>
